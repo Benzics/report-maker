@@ -31,6 +31,10 @@ class GenerateReportJob implements ShouldQueue
         public array $selectedColumns,
         public ?string $filterColumn,
         public ?string $filterValue,
+        public ?string $filterColumn2,
+        public ?string $filterValue2,
+        public ?string $filterColumn3,
+        public ?string $filterValue3,
         public string $sessionId
     ) {
         //
@@ -93,6 +97,10 @@ class GenerateReportJob implements ShouldQueue
                 'selected_columns' => $this->selectedColumns,
                 'filter_column' => $this->filterColumn,
                 'filter_value' => $this->filterValue,
+                'filter_column2' => $this->filterColumn2,
+                'filter_value2' => $this->filterValue2,
+                'filter_column3' => $this->filterColumn3,
+                'filter_value3' => $this->filterValue3,
                 'file_path' => $storedPath,
                 'file_name' => $fileName,
                 'file_size' => Storage::disk('local')->size($storedPath),
@@ -140,17 +148,19 @@ class GenerateReportJob implements ShouldQueue
             $highestRow = $worksheet->getHighestRow();
             $highestColumn = $worksheet->getHighestColumn();
 
-            // Get all data with proper date handling
+            // Get all data while preserving original formatting
             $allData = [];
             for ($row = 1; $row <= $highestRow; $row++) {
                 $rowData = [];
                 for ($col = 'A'; $col <= $highestColumn; $col++) {
                     $cell = $worksheet->getCell($col.$row);
-                    $cellValue = $cell->getValue();
 
-                    // Check if the cell contains a date
-                    if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
-                        $cellValue = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cell->getCalculatedValue());
+                    // Get the formatted display value to preserve original formatting
+                    $cellValue = $cell->getFormattedValue();
+
+                    // If the formatted value is empty but the cell has a value, use the raw value
+                    if (empty($cellValue) && ! empty($cell->getValue())) {
+                        $cellValue = $cell->getValue();
                     }
 
                     $rowData[] = $cellValue;
@@ -190,32 +200,63 @@ class GenerateReportJob implements ShouldQueue
      */
     private function applyFilters(array $data): array
     {
-        if (empty($this->filterColumn) || empty($this->filterValue)) {
+        // Collect all active filters
+        $filters = [];
+
+        if (! empty($this->filterColumn) && ! empty($this->filterValue)) {
+            $filters[] = [
+                'column' => (int) $this->filterColumn,
+                'value' => trim($this->filterValue),
+                'isDate' => $this->isDateValue(trim($this->filterValue)),
+            ];
+        }
+
+        if (! empty($this->filterColumn2) && ! empty($this->filterValue2)) {
+            $filters[] = [
+                'column' => (int) $this->filterColumn2,
+                'value' => trim($this->filterValue2),
+                'isDate' => $this->isDateValue(trim($this->filterValue2)),
+            ];
+        }
+
+        if (! empty($this->filterColumn3) && ! empty($this->filterValue3)) {
+            $filters[] = [
+                'column' => (int) $this->filterColumn3,
+                'value' => trim($this->filterValue3),
+                'isDate' => $this->isDateValue(trim($this->filterValue3)),
+            ];
+        }
+
+        // If no filters are active, return all data
+        if (empty($filters)) {
             return $data;
         }
 
-        $filterColumnIndex = (int) $this->filterColumn;
-        $filterValue = trim($this->filterValue);
+        // Apply all filters (AND logic - all conditions must be met)
+        return array_filter($data, function ($row) use ($filters) {
+            foreach ($filters as $filter) {
+                if (! isset($row[$filter['column']])) {
+                    return false;
+                }
 
-        // Check if the filter value looks like a date
-        $isDateFilter = $this->isDateValue($filterValue);
+                $cellValue = $row[$filter['column']];
 
-        return array_filter($data, function ($row) use ($filterColumnIndex, $filterValue, $isDateFilter) {
-            if (! isset($row[$filterColumnIndex])) {
-                return false;
+                if ($filter['isDate']) {
+                    if (! $this->matchDateValue($cellValue, $filter['value'])) {
+                        return false;
+                    }
+                } else {
+                    // Regular text filtering
+                    $cellValue = strtolower(trim($cellValue));
+                    $filterValue = strtolower($filter['value']);
+
+                    if (strpos($cellValue, $filterValue) === false) {
+                        return false;
+                    }
+                }
             }
 
-            $cellValue = $row[$filterColumnIndex];
-
-            if ($isDateFilter) {
-                return $this->matchDateValue($cellValue, $filterValue);
-            } else {
-                // Regular text filtering
-                $cellValue = strtolower(trim($cellValue));
-                $filterValue = strtolower($filterValue);
-
-                return strpos($cellValue, $filterValue) !== false;
-            }
+            return true; // All filters passed
         });
     }
 
@@ -260,18 +301,36 @@ class GenerateReportJob implements ShouldQueue
     }
 
     /**
-     * Match date values using PhpSpreadsheet date detection
+     * Match date values while preserving original formatting
      */
     private function matchDateValue($cellValue, string $filterValue): bool
     {
         try {
-            // Convert filter value to DateTime
+            // Convert filter value to DateTime for comparison
             $filterDate = $this->parseDateValue($filterValue);
             if (! $filterDate) {
-                return false;
+                // If filter value is not a valid date, fall back to string comparison
+                $cellValueStr = strtolower(trim($cellValue));
+                $filterValueStr = strtolower($filterValue);
+
+                return strpos($cellValueStr, $filterValueStr) !== false;
             }
 
-            // If cell value is already a DateTime object from PhpSpreadsheet
+            // If cell value is a string (formatted date), try to parse it as date
+            if (is_string($cellValue)) {
+                $cellDate = $this->parseDateValue($cellValue);
+                if ($cellDate) {
+                    return $this->datesMatch($cellDate, $filterDate);
+                }
+
+                // If parsing fails, try string comparison for partial matches
+                $cellValueStr = strtolower(trim($cellValue));
+                $filterValueStr = strtolower($filterValue);
+
+                return strpos($cellValueStr, $filterValueStr) !== false;
+            }
+
+            // If cell value is a DateTime object (shouldn't happen with new approach, but keep for safety)
             if ($cellValue instanceof \DateTime) {
                 return $this->datesMatch($cellValue, $filterDate);
             }
@@ -283,15 +342,7 @@ class GenerateReportJob implements ShouldQueue
                 return $this->datesMatch($cellDate, $filterDate);
             }
 
-            // If cell value is a string, try to parse it as date
-            if (is_string($cellValue)) {
-                $cellDate = $this->parseDateValue($cellValue);
-                if ($cellDate) {
-                    return $this->datesMatch($cellDate, $filterDate);
-                }
-            }
-
-            // Fallback to string comparison for partial matches
+            // Fallback to string comparison
             $cellValueStr = strtolower(trim($cellValue));
             $filterValueStr = strtolower($filterValue);
 
@@ -317,6 +368,9 @@ class GenerateReportJob implements ShouldQueue
      */
     private function parseDateValue(string $value): ?\DateTime
     {
+        // Clean the value first
+        $value = trim($value);
+
         $dateFormats = [
             'm/d/Y',     // 09/15/2025
             'm-d-Y',     // 09-15-2025
@@ -331,6 +385,11 @@ class GenerateReportJob implements ShouldQueue
             'n-j-Y',     // 9-15-2025
             'j/n/Y',     // 15/9/2025
             'j-n-Y',     // 15-9-2025
+            'm/d/Y H:i:s', // 09/15/2025 14:30:00
+            'm-d-Y H:i:s', // 09-15-2025 14:30:00
+            'Y-m-d H:i:s', // 2025-09-15 14:30:00
+            'd/m/Y H:i:s', // 15/09/2025 14:30:00
+            'd-m-Y H:i:s', // 15-09-2025 14:30:00
         ];
 
         foreach ($dateFormats as $format) {
@@ -340,7 +399,15 @@ class GenerateReportJob implements ShouldQueue
             }
         }
 
-        return null;
+        // Try to parse as a general date string
+        try {
+            $date = new \DateTime($value);
+
+            return $date;
+        } catch (\Exception $e) {
+            // If all else fails, return null
+            return null;
+        }
     }
 
     /**
@@ -474,8 +541,19 @@ class GenerateReportJob implements ShouldQueue
     {
         $description = 'Generated report with '.count($this->selectedColumns).' selected columns';
 
+        $filters = [];
         if (! empty($this->filterColumn) && ! empty($this->filterValue)) {
-            $description .= " filtered by column {$this->filterColumn} containing '{$this->filterValue}'";
+            $filters[] = "column {$this->filterColumn} containing '{$this->filterValue}'";
+        }
+        if (! empty($this->filterColumn2) && ! empty($this->filterValue2)) {
+            $filters[] = "column {$this->filterColumn2} containing '{$this->filterValue2}'";
+        }
+        if (! empty($this->filterColumn3) && ! empty($this->filterValue3)) {
+            $filters[] = "column {$this->filterColumn3} containing '{$this->filterValue3}'";
+        }
+
+        if (! empty($filters)) {
+            $description .= ' filtered by '.implode(' AND ', $filters);
         }
 
         return $description;

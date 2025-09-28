@@ -308,59 +308,167 @@
         <!-- Filter Options -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <h2 class="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">{{ __('Filter Data (Optional)') }}</h2>
-            <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">{{ __('Filter the data by a specific column and value.') }}</p>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-6">{{ __('Filter the data by up to three columns and values. All filters work together (AND logic).') }}</p>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" 
-                 wire:loading.class="opacity-50 pointer-events-none"
-                 wire:target="clearCache">
-                <div>
-                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        {{ __('Filter Column') }}
-                    </label>
-                    <select 
-                        wire:model="filterColumn"
-                        class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
-                    >
-                        <option value="">{{ __('Select a column to filter by...') }}</option>
-                        @foreach($columns as $index => $column)
-                            <option value="{{ $index }}">{{ $column['name'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                        {{ __('Filter Value') }}
-                        @if($isDateColumn)
-                            <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">({{ __('Date detected') }})</span>
-                        @endif
-                    </label>
+            <!-- Filter 1 -->
+            <div class="mb-6">
+                <h3 class="text-md font-medium text-zinc-800 dark:text-zinc-200 mb-4">{{ __('Filter 1') }}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" 
+                     wire:loading.class="opacity-50 pointer-events-none"
+                     wire:target="clearCache">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Column') }}
+                        </label>
+                        <select 
+                            wire:model="filterColumn"
+                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
+                        >
+                            <option value="">{{ __('Select a column to filter by...') }}</option>
+                            @foreach($columns as $index => $column)
+                                <option value="{{ $index }}">{{ $column['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     
-                    @if($isDateColumn)
-                        <input 
-                            type="date" 
-                            wire:model="filterValue"
-                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                            x-bind:disabled="!$wire.filterColumn"
-                        />
-                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                            {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
-                        </p>
-                    @else
-                        <input 
-                            type="text" 
-                            wire:model="filterValue"
-                            placeholder="{{ __('Enter value to filter by...') }}"
-                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                            x-bind:disabled="!$wire.filterColumn"
-                        />
-                    @endif
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Value') }}
+                            @if($isDateColumn)
+                                <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">({{ __('Date detected') }})</span>
+                            @endif
+                        </label>
+                        
+                        @if($isDateColumn)
+                            <input 
+                                type="date" 
+                                wire:model="filterValue"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn"
+                            />
+                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
+                            </p>
+                        @else
+                            <input 
+                                type="text" 
+                                wire:model="filterValue"
+                                placeholder="{{ __('Enter value to filter by...') }}"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn"
+                            />
+                        @endif
+                    </div>
                 </div>
             </div>
 
-            <div x-show="$wire.filterColumn && !$wire.filterValue" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
+            <!-- Filter 2 -->
+            <div class="mb-6">
+                <h3 class="text-md font-medium text-zinc-800 dark:text-zinc-200 mb-4">{{ __('Filter 2 (Optional)') }}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" 
+                     wire:loading.class="opacity-50 pointer-events-none"
+                     wire:target="clearCache">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Column') }}
+                        </label>
+                        <select 
+                            wire:model="filterColumn2"
+                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
+                        >
+                            <option value="">{{ __('Select a column to filter by...') }}</option>
+                            @foreach($columns as $index => $column)
+                                <option value="{{ $index }}">{{ $column['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Value') }}
+                            @if($isDateColumn2)
+                                <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">({{ __('Date detected') }})</span>
+                            @endif
+                        </label>
+                        
+                        @if($isDateColumn2)
+                            <input 
+                                type="date" 
+                                wire:model="filterValue2"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn2"
+                            />
+                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
+                            </p>
+                        @else
+                            <input 
+                                type="text" 
+                                wire:model="filterValue2"
+                                placeholder="{{ __('Enter value to filter by...') }}"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn2"
+                            />
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter 3 -->
+            <div class="mb-4">
+                <h3 class="text-md font-medium text-zinc-800 dark:text-zinc-200 mb-4">{{ __('Filter 3 (Optional)') }}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4" 
+                     wire:loading.class="opacity-50 pointer-events-none"
+                     wire:target="clearCache">
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Column') }}
+                        </label>
+                        <select 
+                            wire:model="filterColumn3"
+                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
+                        >
+                            <option value="">{{ __('Select a column to filter by...') }}</option>
+                            @foreach($columns as $index => $column)
+                                <option value="{{ $index }}">{{ $column['name'] }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                            {{ __('Filter Value') }}
+                            @if($isDateColumn3)
+                                <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">({{ __('Date detected') }})</span>
+                            @endif
+                        </label>
+                        
+                        @if($isDateColumn3)
+                            <input 
+                                type="date" 
+                                wire:model="filterValue3"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn3"
+                            />
+                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
+                            </p>
+                        @else
+                            <input 
+                                type="text" 
+                                wire:model="filterValue3"
+                                placeholder="{{ __('Enter value to filter by...') }}"
+                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                x-bind:disabled="!$wire.filterColumn3"
+                            />
+                        @endif
+                    </div>
+                </div>
+            </div>
+
+            <div x-show="($wire.filterColumn && !$wire.filterValue) || ($wire.filterColumn2 && !$wire.filterValue2) || ($wire.filterColumn3 && !$wire.filterValue3)" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
                 <p class="text-sm text-blue-800 dark:text-blue-200">
-                    {{ __('Enter a value to filter by the selected column.') }}
+                    {{ __('Please enter values for all selected filter columns.') }}
                 </p>
             </div>
         </div>

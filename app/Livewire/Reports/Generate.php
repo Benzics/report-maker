@@ -25,6 +25,14 @@ class Generate extends Component
 
     public $filterValue = '';
 
+    public $filterColumn2 = '';
+
+    public $filterValue2 = '';
+
+    public $filterColumn3 = '';
+
+    public $filterValue3 = '';
+
     public $isLoading = false;
 
     public $error = '';
@@ -34,6 +42,10 @@ class Generate extends Component
     public $sessionId;
 
     public $isDateColumn = false;
+
+    public $isDateColumn2 = false;
+
+    public $isDateColumn3 = false;
 
     // Cache key for processed columns
     private $cacheKey;
@@ -206,6 +218,36 @@ class Generate extends Component
         $this->validationError = '';
     }
 
+    public function updatedFilterColumn2()
+    {
+        // Clear validation error when user changes filter column
+        $this->validationError = '';
+
+        // Check if the selected column contains date values
+        $this->isDateColumn2 = $this->isColumnDateType($this->filterColumn2);
+    }
+
+    public function updatedFilterValue2()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterColumn3()
+    {
+        // Clear validation error when user changes filter column
+        $this->validationError = '';
+
+        // Check if the selected column contains date values
+        $this->isDateColumn3 = $this->isColumnDateType($this->filterColumn3);
+    }
+
+    public function updatedFilterValue3()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
     public function generateReport()
     {
         try {
@@ -220,9 +262,23 @@ class Generate extends Component
                 return;
             }
 
-            // Validate filter fields if filter column is selected
+            // Validate filter fields if filter columns are selected
             if (! empty($this->filterColumn) && empty(trim($this->filterValue))) {
                 $this->validationError = __('Please enter a filter value when a filter column is selected.');
+                $this->dispatch('showValidationError', $this->validationError);
+
+                return;
+            }
+
+            if (! empty($this->filterColumn2) && empty(trim($this->filterValue2))) {
+                $this->validationError = __('Please enter a filter value for the second filter column.');
+                $this->dispatch('showValidationError', $this->validationError);
+
+                return;
+            }
+
+            if (! empty($this->filterColumn3) && empty(trim($this->filterValue3))) {
+                $this->validationError = __('Please enter a filter value for the third filter column.');
                 $this->dispatch('showValidationError', $this->validationError);
 
                 return;
@@ -233,7 +289,16 @@ class Generate extends Component
 
             // Always use queued job for consistent behavior
             $this->generateReportAsync();
-            Log::info('Generating report...', ['document_id' => $this->document->id, 'selected_columns' => $this->selectedColumns, 'filter_column' => $this->filterColumn, 'filter_value' => $this->filterValue]);
+            Log::info('Generating report...', [
+                'document_id' => $this->document->id,
+                'selected_columns' => $this->selectedColumns,
+                'filter_column' => $this->filterColumn,
+                'filter_value' => $this->filterValue,
+                'filter_column2' => $this->filterColumn2,
+                'filter_value2' => $this->filterValue2,
+                'filter_column3' => $this->filterColumn3,
+                'filter_value3' => $this->filterValue3,
+            ]);
 
         } catch (Throwable $exception) {
             Log::error('Failed to generate report', [
@@ -398,6 +463,10 @@ class Generate extends Component
                 $this->selectedColumns,
                 $this->filterColumn,
                 $this->filterValue,
+                $this->filterColumn2,
+                $this->filterValue2,
+                $this->filterColumn3,
+                $this->filterValue3,
                 $this->sessionId
             );
 
