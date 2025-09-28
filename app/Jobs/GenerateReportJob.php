@@ -7,7 +7,6 @@ use App\Models\GeneratedReport;
 use App\Models\User;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -20,6 +19,7 @@ class GenerateReportJob implements ShouldQueue
     use Queueable;
 
     public $timeout = 300; // 5 minutes timeout
+
     public $tries = 3; // Retry up to 3 times
 
     /**
@@ -43,8 +43,9 @@ class GenerateReportJob implements ShouldQueue
     {
         try {
             $user = User::find($this->userId);
-            if (!$user) {
+            if (! $user) {
                 Log::error('User not found for report generation', ['user_id' => $this->userId]);
+
                 return;
             }
 
@@ -52,40 +53,42 @@ class GenerateReportJob implements ShouldQueue
                 ->where('user_id', $this->userId)
                 ->first();
 
-            if (!$document) {
+            if (! $document) {
                 Log::error('Document not found for report generation', [
                     'document_id' => $this->documentId,
-                    'user_id' => $this->userId
+                    'user_id' => $this->userId,
                 ]);
+
                 return;
             }
 
             // Process the report data
             $reportData = $this->processReportData($document);
-            
+
             if (empty($reportData)) {
                 $this->dispatchError('No data found matching your criteria.');
+
                 return;
             }
 
             // Create the Excel file
             $filePath = $this->createExcelFile($reportData, $document);
-            
+
             // Generate a unique filename
-            $fileName = 'report_' . $document->id . '_' . time() . '.xlsx';
-            
+            $fileName = 'report_'.$document->id.'_'.time().'.xlsx';
+
             // Store the file
-            $storedPath = 'reports/' . $fileName;
+            $storedPath = 'reports/'.$fileName;
             Storage::disk('local')->put($storedPath, file_get_contents($filePath));
-            
+
             // Clean up temporary file
             unlink($filePath);
-            
+
             // Create the generated report record
             $generatedReport = GeneratedReport::create([
                 'document_id' => $document->id,
                 'user_id' => $this->userId,
-                'name' => 'Report from ' . $document->original_name,
+                'name' => 'Report from '.$document->original_name,
                 'description' => $this->getReportDescription($document),
                 'selected_columns' => $this->selectedColumns,
                 'filter_column' => $this->filterColumn,
@@ -108,7 +111,7 @@ class GenerateReportJob implements ShouldQueue
                 'trace' => $exception->getTraceAsString(),
             ]);
 
-            $this->dispatchError('Failed to generate report: ' . $exception->getMessage());
+            $this->dispatchError('Failed to generate report: '.$exception->getMessage());
         }
     }
 
@@ -128,17 +131,28 @@ class GenerateReportJob implements ShouldQueue
             $tempPath = tempnam(sys_get_temp_dir(), 'excel_');
             file_put_contents($tempPath, $fileContents);
 
-            $spreadsheet = IOFactory::load($tempPath);
+            $reader = IOFactory::createReader('Xlsx');
+            $reader->setReadDataOnly(false); // We need to read formatting for dates
+            $reader->setReadEmptyCells(false);
+
+            $spreadsheet = $reader->load($tempPath);
             $worksheet = $spreadsheet->getActiveSheet();
             $highestRow = $worksheet->getHighestRow();
             $highestColumn = $worksheet->getHighestColumn();
 
-            // Get all data
+            // Get all data with proper date handling
             $allData = [];
             for ($row = 1; $row <= $highestRow; $row++) {
                 $rowData = [];
                 for ($col = 'A'; $col <= $highestColumn; $col++) {
-                    $cellValue = $worksheet->getCell($col . $row)->getValue();
+                    $cell = $worksheet->getCell($col.$row);
+                    $cellValue = $cell->getValue();
+
+                    // Check if the cell contains a date
+                    if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+                        $cellValue = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cell->getCalculatedValue());
+                    }
+
                     $rowData[] = $cellValue;
                 }
                 $allData[] = $rowData;
@@ -166,6 +180,7 @@ class GenerateReportJob implements ShouldQueue
                 'document_id' => $document->id,
                 'message' => $exception->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -180,16 +195,160 @@ class GenerateReportJob implements ShouldQueue
         }
 
         $filterColumnIndex = (int) $this->filterColumn;
-        $filterValue = strtolower(trim($this->filterValue));
+        $filterValue = trim($this->filterValue);
 
-        return array_filter($data, function($row) use ($filterColumnIndex, $filterValue) {
-            if (!isset($row[$filterColumnIndex])) {
+        // Check if the filter value looks like a date
+        $isDateFilter = $this->isDateValue($filterValue);
+
+        return array_filter($data, function ($row) use ($filterColumnIndex, $filterValue, $isDateFilter) {
+            if (! isset($row[$filterColumnIndex])) {
                 return false;
             }
-            
-            $cellValue = strtolower(trim($row[$filterColumnIndex]));
-            return strpos($cellValue, $filterValue) !== false;
+
+            $cellValue = $row[$filterColumnIndex];
+
+            if ($isDateFilter) {
+                return $this->matchDateValue($cellValue, $filterValue);
+            } else {
+                // Regular text filtering
+                $cellValue = strtolower(trim($cellValue));
+                $filterValue = strtolower($filterValue);
+
+                return strpos($cellValue, $filterValue) !== false;
+            }
         });
+    }
+
+    /**
+     * Check if a value looks like a date
+     */
+    private function isDateValue(string $value): bool
+    {
+        // Common date formats
+        $dateFormats = [
+            'm/d/Y',     // 09/15/2025
+            'm-d-Y',     // 09-15-2025
+            'Y-m-d',     // 2025-09-15
+            'd/m/Y',     // 15/09/2025
+            'd-m-Y',     // 15-09-2025
+            'm/d/y',     // 09/15/25
+            'm-d-y',     // 09-15-25
+            'd/m/y',     // 15/09/25
+            'd-m-y',     // 15-09-25
+        ];
+
+        foreach ($dateFormats as $format) {
+            $date = \DateTime::createFromFormat($format, $value);
+            if ($date && $date->format($format) === $value) {
+                return true;
+            }
+        }
+
+        // Also check for common date patterns with regex
+        $datePatterns = [
+            '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/',  // MM/DD/YYYY, MM-DD-YYYY
+            '/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/',    // YYYY/MM/DD, YYYY-MM-DD
+        ];
+
+        foreach ($datePatterns as $pattern) {
+            if (preg_match($pattern, $value)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Match date values using PhpSpreadsheet date detection
+     */
+    private function matchDateValue($cellValue, string $filterValue): bool
+    {
+        try {
+            // Convert filter value to DateTime
+            $filterDate = $this->parseDateValue($filterValue);
+            if (! $filterDate) {
+                return false;
+            }
+
+            // If cell value is already a DateTime object from PhpSpreadsheet
+            if ($cellValue instanceof \DateTime) {
+                return $this->datesMatch($cellValue, $filterDate);
+            }
+
+            // If cell value is a numeric value (Excel serial date)
+            if (is_numeric($cellValue)) {
+                $cellDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cellValue);
+
+                return $this->datesMatch($cellDate, $filterDate);
+            }
+
+            // If cell value is a string, try to parse it as date
+            if (is_string($cellValue)) {
+                $cellDate = $this->parseDateValue($cellValue);
+                if ($cellDate) {
+                    return $this->datesMatch($cellDate, $filterDate);
+                }
+            }
+
+            // Fallback to string comparison for partial matches
+            $cellValueStr = strtolower(trim($cellValue));
+            $filterValueStr = strtolower($filterValue);
+
+            return strpos($cellValueStr, $filterValueStr) !== false;
+
+        } catch (\Exception $e) {
+            // If date parsing fails, fall back to string comparison
+            Log::warning('Date matching failed, falling back to string comparison', [
+                'cell_value' => $cellValue,
+                'filter_value' => $filterValue,
+                'error' => $e->getMessage(),
+            ]);
+
+            $cellValueStr = strtolower(trim($cellValue));
+            $filterValueStr = strtolower($filterValue);
+
+            return strpos($cellValueStr, $filterValueStr) !== false;
+        }
+    }
+
+    /**
+     * Parse a date value using multiple formats
+     */
+    private function parseDateValue(string $value): ?\DateTime
+    {
+        $dateFormats = [
+            'm/d/Y',     // 09/15/2025
+            'm-d-Y',     // 09-15-2025
+            'Y-m-d',     // 2025-09-15
+            'd/m/Y',     // 15/09/2025
+            'd-m-Y',     // 15-09-2025
+            'm/d/y',     // 09/15/25
+            'm-d-y',     // 09-15-25
+            'd/m/y',     // 15/09/25
+            'd-m-y',     // 15-09-25
+            'n/j/Y',     // 9/15/2025 (no leading zeros)
+            'n-j-Y',     // 9-15-2025
+            'j/n/Y',     // 15/9/2025
+            'j-n-Y',     // 15-9-2025
+        ];
+
+        foreach ($dateFormats as $format) {
+            $date = \DateTime::createFromFormat($format, $value);
+            if ($date && $date->format($format) === $value) {
+                return $date;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if two dates match (same day, ignoring time)
+     */
+    private function datesMatch(\DateTime $date1, \DateTime $date2): bool
+    {
+        return $date1->format('Y-m-d') === $date2->format('Y-m-d');
     }
 
     /**
@@ -218,7 +377,7 @@ class GenerateReportJob implements ShouldQueue
      */
     private function createExcelFile(array $data, Document $document): string
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $worksheet = $spreadsheet->getActiveSheet();
 
         // Get column names from the original document
@@ -244,7 +403,7 @@ class GenerateReportJob implements ShouldQueue
         }
 
         // Create temporary file
-        $tempPath = tempnam(sys_get_temp_dir(), 'generated_report_') . '.xlsx';
+        $tempPath = tempnam(sys_get_temp_dir(), 'generated_report_').'.xlsx';
         $writer = new Xlsx($spreadsheet);
         $writer->save($tempPath);
 
@@ -273,22 +432,22 @@ class GenerateReportJob implements ShouldQueue
             $reader = IOFactory::createReader('Xlsx');
             $reader->setReadDataOnly(true);
             $reader->setReadEmptyCells(false);
-            
+
             $spreadsheet = $reader->load($tempPath);
             $worksheet = $spreadsheet->getActiveSheet();
-            
+
             $highestColumn = $worksheet->getHighestColumn(1);
             $highestColumnIndex = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::columnIndexFromString($highestColumn);
 
             $headers = [];
             for ($colIndex = 1; $colIndex <= $highestColumnIndex; $colIndex++) {
                 $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
-                $cellValue = $worksheet->getCell($columnLetter . '1')->getValue();
-                if (!empty($cellValue)) {
+                $cellValue = $worksheet->getCell($columnLetter.'1')->getValue();
+                if (! empty($cellValue)) {
                     $headers[] = [
                         'column' => $columnLetter,
                         'name' => $cellValue,
-                        'index' => count($headers)
+                        'index' => count($headers),
                     ];
                 }
             }
@@ -303,6 +462,7 @@ class GenerateReportJob implements ShouldQueue
                 'document_id' => $document->id,
                 'message' => $exception->getMessage(),
             ]);
+
             return [];
         }
     }
@@ -312,9 +472,9 @@ class GenerateReportJob implements ShouldQueue
      */
     private function getReportDescription(Document $document): string
     {
-        $description = 'Generated report with ' . count($this->selectedColumns) . ' selected columns';
-        
-        if (!empty($this->filterColumn) && !empty($this->filterValue)) {
+        $description = 'Generated report with '.count($this->selectedColumns).' selected columns';
+
+        if (! empty($this->filterColumn) && ! empty($this->filterValue)) {
             $description .= " filtered by column {$this->filterColumn} containing '{$this->filterValue}'";
         }
 

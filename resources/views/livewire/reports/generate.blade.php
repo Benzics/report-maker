@@ -72,61 +72,112 @@
                  }, 100);
              });
              
-             // Poll for job completion (simpler approach for now)
-             let pollingInterval = null;
-             
-             this.$wire.on('startPolling', () => {
-                 if (pollingInterval) clearInterval(pollingInterval);
-                 
-                 pollingInterval = setInterval(() => {
-                     // Check if there are any completed reports for this user
-                     fetch('/api/reports/check-completion', {
-                         method: 'GET',
-                         headers: {
-                             'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                             'Content-Type': 'application/json',
-                         }
-                     })
-                     .then(response => response.json())
-                     .then(data => {
-                         if (data.completed) {
-                             clearInterval(pollingInterval);
-                             Swal.close(); // Hide loading dialog
-                             Swal.fire({
-                                 icon: 'success',
-                                 title: '{{ __('Report Generated!') }}',
-                                 text: 'Your report has been generated successfully!',
-                                 confirmButtonText: '{{ __('Download Report') }}',
-                                 showCancelButton: true,
-                                 cancelButtonText: '{{ __('Close') }}'
-                             }).then((result) => {
-                                 if (result.isConfirmed) {
-                                     window.location.href = data.download_url;
-                                 }
-                             });
-                         } else if (data.failed) {
-                             clearInterval(pollingInterval);
-                             Swal.close(); // Hide loading dialog
-                             Swal.fire({
-                                 icon: 'error',
-                                 title: '{{ __('Report Generation Failed') }}',
-                                 text: data.error_message || 'Report generation failed. Please try again.',
-                                 confirmButtonText: '{{ __('OK') }}'
-                             });
-                         }
-                     })
-                     .catch(error => {
-                         console.error('Error checking report status:', error);
-                     });
-                 }, 3000); // Check every 3 seconds
-             });
-             
-             this.$wire.on('stopPolling', () => {
-                 if (pollingInterval) {
-                     clearInterval(pollingInterval);
-                     pollingInterval = null;
-                 }
-             });
+            // Listen for report generation completion via Echo
+            this.setupEchoListener();
+            
+            // Fallback polling for job completion (keep as backup)
+            let pollingInterval = null;
+            
+            this.$wire.on('startPolling', () => {
+                if (pollingInterval) clearInterval(pollingInterval);
+                
+                pollingInterval = setInterval(() => {
+                    // Check if there are any completed reports for this user
+                    fetch('/api/reports/check-completion', {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Content-Type': 'application/json',
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.completed) {
+                            clearInterval(pollingInterval);
+                            Swal.close(); // Hide loading dialog
+                            Swal.fire({
+                                icon: 'success',
+                                title: '{{ __('Report Generated!') }}',
+                                text: 'Your report has been generated successfully!',
+                                confirmButtonText: '{{ __('Download Report') }}',
+                                showCancelButton: true,
+                                cancelButtonText: '{{ __('Close') }}'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = data.download_url;
+                                }
+                            });
+                        } else if (data.failed) {
+                            clearInterval(pollingInterval);
+                            Swal.close(); // Hide loading dialog
+                            Swal.fire({
+                                icon: 'error',
+                                title: '{{ __('Report Generation Failed') }}',
+                                text: data.error_message || 'Report generation failed. Please try again.',
+                                confirmButtonText: '{{ __('OK') }}'
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking report status:', error);
+                    });
+                }, 3000); // Check every 3 seconds
+            });
+            
+            this.$wire.on('stopPolling', () => {
+                if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                }
+            });
+        },
+        
+        setupEchoListener() {
+            // Listen for report generation events via Echo
+            if (window.Echo && '{{ $sessionId }}') {
+                const channelName = 'report-generation.{{ $sessionId }}';
+                console.log('Setting up Echo listener for channel:', channelName);
+                
+                window.Echo.private(channelName)
+                    .listen('ReportGenerated', (e) => {
+                        console.log('Report generation completed via Echo:', e);
+                        
+                        // Hide loading dialog
+                        Swal.close();
+                        
+                        // Show success message with download option
+                        Swal.fire({
+                            icon: 'success',
+                            title: '{{ __('Report Generated!') }}',
+                            text: e.message || 'Your report has been generated successfully!',
+                            confirmButtonText: '{{ __('View Saved Reports') }}',
+                            showCancelButton: true,
+                            cancelButtonText: '{{ __('Close') }}'
+                        }).then((result) => {
+
+                            if (result.isConfirmed && e.report && e.report.saved_url) {
+                                window.location.href = e.report.saved_url;
+                          
+                            }
+                        });
+                    })
+                    .listen('ReportGenerationFailed', (e) => {
+                        console.log('Report generation failed via Echo:', e);
+                        
+                        // Hide loading dialog
+                        Swal.close();
+                        
+                        // Show error message
+                        Swal.fire({
+                            icon: 'error',
+                            title: '{{ __('Report Generation Failed') }}',
+                            text: e.message || 'Report generation failed. Please try again.',
+                            confirmButtonText: '{{ __('OK') }}'
+                        });
+                    });
+            } else {
+                console.warn('Echo not available or sessionId missing, falling back to polling');
+            }
          }
      }">
     <!-- Header -->
@@ -218,6 +269,7 @@
     <!-- Form Section - Show when columns are available -->
     @if(!empty($columns))
         <div x-show="!$wire.isLoading" x-transition>
+        <form wire:submit="generateReport">
         <!-- Column Selection -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <h2 class="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">{{ __('Select Columns to Include') }}</h2>
@@ -230,7 +282,7 @@
                     <label class="flex items-center p-3 border border-neutral-200 dark:border-neutral-600 rounded-lg hover:bg-neutral-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors">
                         <input 
                             type="checkbox" 
-                            wire:model="selectedColumns"
+                            wire:model.live="selectedColumns"
                             value="{{ $index }}"
                             class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-neutral-300 dark:border-neutral-600 rounded"
                         />
@@ -279,14 +331,30 @@
                 <div>
                     <label class="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                         {{ __('Filter Value') }}
+                        @if($isDateColumn)
+                            <span class="text-xs text-blue-600 dark:text-blue-400 ml-1">({{ __('Date detected') }})</span>
+                        @endif
                     </label>
-                    <input 
-                        type="text" 
-                        wire:model="filterValue"
-                        placeholder="{{ __('Enter value to filter by...') }}"
-                        class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                        x-bind:disabled="!$wire.filterColumn"
-                    />
+                    
+                    @if($isDateColumn)
+                        <input 
+                            type="date" 
+                            wire:model="filterValue"
+                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                            x-bind:disabled="!$wire.filterColumn"
+                        />
+                        <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                            {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
+                        </p>
+                    @else
+                        <input 
+                            type="text" 
+                            wire:model="filterValue"
+                            placeholder="{{ __('Enter value to filter by...') }}"
+                            class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                            x-bind:disabled="!$wire.filterColumn"
+                        />
+                    @endif
                 </div>
             </div>
 
@@ -301,7 +369,7 @@
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <div class="text-center">
                 <button 
-                    wire:click="generateReport"
+                    type="submit"
                     wire:loading.attr="disabled"
                     wire:target="generateReport"
                     x-bind:disabled="$wire.selectedColumns.length === 0"
@@ -332,6 +400,8 @@
                 </p>
             </div>
         </div>
+        </form>
         </div>
     @endif
 </div>
+

@@ -3,9 +3,7 @@
 namespace App\Events;
 
 use App\Models\GeneratedReport;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
-use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Foundation\Events\Dispatchable;
@@ -16,6 +14,7 @@ class ReportGenerated implements ShouldBroadcast
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     public $generatedReport;
+
     public $sessionId;
 
     /**
@@ -35,7 +34,7 @@ class ReportGenerated implements ShouldBroadcast
     public function broadcastOn(): array
     {
         return [
-            new PrivateChannel('report-generation.' . $this->sessionId),
+            new PrivateChannel('report-generation.'.$this->sessionId),
         ];
     }
 
@@ -50,8 +49,10 @@ class ReportGenerated implements ShouldBroadcast
             'report' => [
                 'id' => $this->generatedReport->id,
                 'name' => $this->generatedReport->name,
+                'document_id' => $this->generatedReport->document_id,
                 'download_url' => route('reports.download', $this->generatedReport->id),
-            ]
+                'saved_url' => route('reports.saved', $this->generatedReport->document_id),
+            ],
         ];
     }
 }
