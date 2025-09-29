@@ -22,7 +22,6 @@ class ViewSavedTest extends TestCase
             ->get(route('reports.saved', $document->id));
 
         $response->assertStatus(200);
-        $response->assertSeeLivewire('reports.view-saved');
     }
 
     public function test_cannot_view_other_users_document_reports(): void

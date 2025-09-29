@@ -35,6 +35,12 @@ class GenerateReportJob implements ShouldQueue
         public ?string $filterValue2,
         public ?string $filterColumn3,
         public ?string $filterValue3,
+        public ?string $filterValueStart,
+        public ?string $filterValueEnd,
+        public ?string $filterValue2Start,
+        public ?string $filterValue2End,
+        public ?string $filterValue3Start,
+        public ?string $filterValue3End,
         public string $sessionId
     ) {
         //
@@ -101,6 +107,12 @@ class GenerateReportJob implements ShouldQueue
                 'filter_value2' => $this->filterValue2,
                 'filter_column3' => $this->filterColumn3,
                 'filter_value3' => $this->filterValue3,
+                'filter_value_start' => $this->filterValueStart,
+                'filter_value_end' => $this->filterValueEnd,
+                'filter_value2_start' => $this->filterValue2Start,
+                'filter_value2_end' => $this->filterValue2End,
+                'filter_value3_start' => $this->filterValue3Start,
+                'filter_value3_end' => $this->filterValue3End,
                 'file_path' => $storedPath,
                 'file_name' => $fileName,
                 'file_size' => Storage::disk('local')->size($storedPath),
@@ -154,13 +166,28 @@ class GenerateReportJob implements ShouldQueue
                 $rowData = [];
                 for ($col = 'A'; $col <= $highestColumn; $col++) {
                     $cell = $worksheet->getCell($col.$row);
+                    $rawValue = $cell->getValue();
+                    $formattedValue = $cell->getFormattedValue();
 
-                    // Get the formatted display value to preserve original formatting
-                    $cellValue = $cell->getFormattedValue();
-
-                    // If the formatted value is empty but the cell has a value, use the raw value
-                    if (empty($cellValue) && ! empty($cell->getValue())) {
-                        $cellValue = $cell->getValue();
+                    // For date columns, we need to handle both raw Excel serial numbers and formatted dates
+                    if (is_numeric($rawValue) && $rawValue >= 1 && $rawValue <= 2958465) {
+                        // This could be an Excel date serial number
+                        try {
+                            $excelDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($rawValue);
+                            if ($excelDate && $excelDate->format('Y') >= 1900 && $excelDate->format('Y') <= 9999) {
+                                // It's a valid Excel date, use the formatted value if available, otherwise format it
+                                $cellValue = ! empty($formattedValue) ? $formattedValue : $excelDate->format('Y-m-d');
+                            } else {
+                                // Not a valid date, use the raw value
+                                $cellValue = $rawValue;
+                            }
+                        } catch (\Exception $e) {
+                            // Not a valid Excel date, use the raw value
+                            $cellValue = $rawValue;
+                        }
+                    } else {
+                        // Use formatted value if available, otherwise use raw value
+                        $cellValue = ! empty($formattedValue) ? $formattedValue : $rawValue;
                     }
 
                     $rowData[] = $cellValue;
@@ -203,28 +230,55 @@ class GenerateReportJob implements ShouldQueue
         // Collect all active filters
         $filters = [];
 
-        if (! empty($this->filterColumn) && ! empty($this->filterValue)) {
-            $filters[] = [
-                'column' => (int) $this->filterColumn,
-                'value' => trim($this->filterValue),
-                'isDate' => $this->isDateValue(trim($this->filterValue)),
-            ];
+        // Filter 1
+        if (! empty($this->filterColumn)) {
+            $hasSingleValue = ! empty(trim($this->filterValue));
+            $hasRangeValues = ! empty(trim($this->filterValueStart)) || ! empty(trim($this->filterValueEnd));
+
+            if ($hasSingleValue || $hasRangeValues) {
+                $filters[] = [
+                    'column' => (int) $this->filterColumn,
+                    'singleValue' => $hasSingleValue ? trim($this->filterValue) : null,
+                    'rangeStart' => ! empty(trim($this->filterValueStart)) ? trim($this->filterValueStart) : null,
+                    'rangeEnd' => ! empty(trim($this->filterValueEnd)) ? trim($this->filterValueEnd) : null,
+                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue)) :
+                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValueStart ?: $this->filterValueEnd)) : false),
+                ];
+            }
         }
 
-        if (! empty($this->filterColumn2) && ! empty($this->filterValue2)) {
-            $filters[] = [
-                'column' => (int) $this->filterColumn2,
-                'value' => trim($this->filterValue2),
-                'isDate' => $this->isDateValue(trim($this->filterValue2)),
-            ];
+        // Filter 2
+        if (! empty($this->filterColumn2)) {
+            $hasSingleValue = ! empty(trim($this->filterValue2));
+            $hasRangeValues = ! empty(trim($this->filterValue2Start)) || ! empty(trim($this->filterValue2End));
+
+            if ($hasSingleValue || $hasRangeValues) {
+                $filters[] = [
+                    'column' => (int) $this->filterColumn2,
+                    'singleValue' => $hasSingleValue ? trim($this->filterValue2) : null,
+                    'rangeStart' => ! empty(trim($this->filterValue2Start)) ? trim($this->filterValue2Start) : null,
+                    'rangeEnd' => ! empty(trim($this->filterValue2End)) ? trim($this->filterValue2End) : null,
+                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue2)) :
+                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValue2Start ?: $this->filterValue2End)) : false),
+                ];
+            }
         }
 
-        if (! empty($this->filterColumn3) && ! empty($this->filterValue3)) {
-            $filters[] = [
-                'column' => (int) $this->filterColumn3,
-                'value' => trim($this->filterValue3),
-                'isDate' => $this->isDateValue(trim($this->filterValue3)),
-            ];
+        // Filter 3
+        if (! empty($this->filterColumn3)) {
+            $hasSingleValue = ! empty(trim($this->filterValue3));
+            $hasRangeValues = ! empty(trim($this->filterValue3Start)) || ! empty(trim($this->filterValue3End));
+
+            if ($hasSingleValue || $hasRangeValues) {
+                $filters[] = [
+                    'column' => (int) $this->filterColumn3,
+                    'singleValue' => $hasSingleValue ? trim($this->filterValue3) : null,
+                    'rangeStart' => ! empty(trim($this->filterValue3Start)) ? trim($this->filterValue3Start) : null,
+                    'rangeEnd' => ! empty(trim($this->filterValue3End)) ? trim($this->filterValue3End) : null,
+                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue3)) :
+                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValue3Start ?: $this->filterValue3End)) : false),
+                ];
+            }
         }
 
         // If no filters are active, return all data
@@ -242,16 +296,33 @@ class GenerateReportJob implements ShouldQueue
                 $cellValue = $row[$filter['column']];
 
                 if ($filter['isDate']) {
-                    if (! $this->matchDateValue($cellValue, $filter['value'])) {
-                        return false;
+                    // Handle date filtering
+                    if ($filter['singleValue']) {
+                        // Single date match
+                        if (! $this->matchDateValue($cellValue, $filter['singleValue'])) {
+                            return false;
+                        }
+                    } else {
+                        // Range date filtering
+                        if (! $this->matchDateRange($cellValue, $filter['rangeStart'], $filter['rangeEnd'])) {
+                            return false;
+                        }
                     }
                 } else {
                     // Regular text filtering
-                    $cellValue = strtolower(trim($cellValue));
-                    $filterValue = strtolower($filter['value']);
+                    if ($filter['singleValue']) {
+                        // Single text match
+                        $cellValue = strtolower(trim($cellValue));
+                        $filterValue = strtolower($filter['singleValue']);
 
-                    if (strpos($cellValue, $filterValue) === false) {
-                        return false;
+                        if (strpos($cellValue, $filterValue) === false) {
+                            return false;
+                        }
+                    } else {
+                        // Range text filtering (alphabetical range)
+                        if (! $this->matchTextRange($cellValue, $filter['rangeStart'], $filter['rangeEnd'])) {
+                            return false;
+                        }
                     }
                 }
             }
@@ -337,9 +408,20 @@ class GenerateReportJob implements ShouldQueue
 
             // If cell value is a numeric value (Excel serial date)
             if (is_numeric($cellValue)) {
-                $cellDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cellValue);
-
-                return $this->datesMatch($cellDate, $filterDate);
+                // Check if it's a valid Excel date serial number
+                if ($cellValue >= 1 && $cellValue <= 2958465) {
+                    try {
+                        $cellDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cellValue);
+                        if ($cellDate && $cellDate->format('Y') >= 1900 && $cellDate->format('Y') <= 9999) {
+                            return $this->datesMatch($cellDate, $filterDate);
+                        }
+                    } catch (\Exception $e) {
+                        Log::debug('Failed to convert Excel serial number to date in matchDateValue', [
+                            'cell_value' => $cellValue,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
+                }
             }
 
             // Fallback to string comparison
@@ -416,6 +498,96 @@ class GenerateReportJob implements ShouldQueue
     private function datesMatch(\DateTime $date1, \DateTime $date2): bool
     {
         return $date1->format('Y-m-d') === $date2->format('Y-m-d');
+    }
+
+    /**
+     * Match a cell value against a date range
+     */
+    private function matchDateRange($cellValue, ?string $rangeStart, ?string $rangeEnd): bool
+    {
+        try {
+            $cellDate = $this->parseDateValue($cellValue);
+            
+            // If parsing as string failed, try Excel serial number conversion
+            if (! $cellDate && is_numeric($cellValue)) {
+                if ($cellValue >= 1 && $cellValue <= 2958465) {
+                    try {
+                        $cellDate = \PhpOffice\PhpSpreadsheet\Shared\Date::excelToDateTimeObject($cellValue);
+                        if ($cellDate && $cellDate->format('Y') >= 1900 && $cellDate->format('Y') <= 9999) {
+                            // Valid Excel date
+                        } else {
+                            $cellDate = null;
+                        }
+                    } catch (\Exception $e) {
+                        Log::debug('Failed to convert Excel serial number to date in matchDateRange', [
+                            'cell_value' => $cellValue,
+                            'error' => $e->getMessage(),
+                        ]);
+                        $cellDate = null;
+                    }
+                }
+            }
+            
+            if (! $cellDate) {
+                return false;
+            }
+
+            $startDate = $rangeStart ? $this->parseDateValue($rangeStart) : null;
+            $endDate = $rangeEnd ? $this->parseDateValue($rangeEnd) : null;
+
+            // If only start date is provided, check if cell date is >= start
+            if ($startDate && ! $endDate) {
+                return $cellDate >= $startDate;
+            }
+
+            // If only end date is provided, check if cell date is <= end
+            if (! $startDate && $endDate) {
+                return $cellDate <= $endDate;
+            }
+
+            // If both dates are provided, check if cell date is between them
+            if ($startDate && $endDate) {
+                return $cellDate >= $startDate && $cellDate <= $endDate;
+            }
+
+            return false;
+
+        } catch (\Exception $e) {
+            Log::warning('Date range matching failed', [
+                'cell_value' => $cellValue,
+                'range_start' => $rangeStart,
+                'range_end' => $rangeEnd,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Match a cell value against a text range (alphabetical)
+     */
+    private function matchTextRange($cellValue, ?string $rangeStart, ?string $rangeEnd): bool
+    {
+        $cellValue = strtolower(trim($cellValue));
+
+        // If only start value is provided, check if cell value is >= start
+        if ($rangeStart && ! $rangeEnd) {
+            return strcasecmp($cellValue, strtolower($rangeStart)) >= 0;
+        }
+
+        // If only end value is provided, check if cell value is <= end
+        if (! $rangeStart && $rangeEnd) {
+            return strcasecmp($cellValue, strtolower($rangeEnd)) <= 0;
+        }
+
+        // If both values are provided, check if cell value is between them
+        if ($rangeStart && $rangeEnd) {
+            return strcasecmp($cellValue, strtolower($rangeStart)) >= 0 &&
+                   strcasecmp($cellValue, strtolower($rangeEnd)) <= 0;
+        }
+
+        return false;
     }
 
     /**
@@ -497,7 +669,7 @@ class GenerateReportJob implements ShouldQueue
             file_put_contents($tempPath, $fileContents);
 
             $reader = IOFactory::createReader('Xlsx');
-            $reader->setReadDataOnly(true);
+            $reader->setReadDataOnly(false);
             $reader->setReadEmptyCells(false);
 
             $spreadsheet = $reader->load($tempPath);
@@ -509,7 +681,7 @@ class GenerateReportJob implements ShouldQueue
             $headers = [];
             for ($colIndex = 1; $colIndex <= $highestColumnIndex; $colIndex++) {
                 $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
-                $cellValue = $worksheet->getCell($columnLetter.'1')->getValue();
+                $cellValue = $worksheet->getCell($columnLetter.'1')->getFormattedValue();
                 if (! empty($cellValue)) {
                     $headers[] = [
                         'column' => $columnLetter,
@@ -542,14 +714,44 @@ class GenerateReportJob implements ShouldQueue
         $description = 'Generated report with '.count($this->selectedColumns).' selected columns';
 
         $filters = [];
-        if (! empty($this->filterColumn) && ! empty($this->filterValue)) {
-            $filters[] = "column {$this->filterColumn} containing '{$this->filterValue}'";
+
+        // Filter 1
+        if (! empty($this->filterColumn)) {
+            $hasSingleValue = ! empty(trim($this->filterValue));
+            $hasRangeValues = ! empty(trim($this->filterValueStart)) || ! empty(trim($this->filterValueEnd));
+
+            if ($hasSingleValue) {
+                $filters[] = "column {$this->filterColumn} containing '{$this->filterValue}'";
+            } elseif ($hasRangeValues) {
+                $rangeDesc = $this->getRangeDescription($this->filterValueStart, $this->filterValueEnd);
+                $filters[] = "column {$this->filterColumn} {$rangeDesc}";
+            }
         }
-        if (! empty($this->filterColumn2) && ! empty($this->filterValue2)) {
-            $filters[] = "column {$this->filterColumn2} containing '{$this->filterValue2}'";
+
+        // Filter 2
+        if (! empty($this->filterColumn2)) {
+            $hasSingleValue = ! empty(trim($this->filterValue2));
+            $hasRangeValues = ! empty(trim($this->filterValue2Start)) || ! empty(trim($this->filterValue2End));
+
+            if ($hasSingleValue) {
+                $filters[] = "column {$this->filterColumn2} containing '{$this->filterValue2}'";
+            } elseif ($hasRangeValues) {
+                $rangeDesc = $this->getRangeDescription($this->filterValue2Start, $this->filterValue2End);
+                $filters[] = "column {$this->filterColumn2} {$rangeDesc}";
+            }
         }
-        if (! empty($this->filterColumn3) && ! empty($this->filterValue3)) {
-            $filters[] = "column {$this->filterColumn3} containing '{$this->filterValue3}'";
+
+        // Filter 3
+        if (! empty($this->filterColumn3)) {
+            $hasSingleValue = ! empty(trim($this->filterValue3));
+            $hasRangeValues = ! empty(trim($this->filterValue3Start)) || ! empty(trim($this->filterValue3End));
+
+            if ($hasSingleValue) {
+                $filters[] = "column {$this->filterColumn3} containing '{$this->filterValue3}'";
+            } elseif ($hasRangeValues) {
+                $rangeDesc = $this->getRangeDescription($this->filterValue3Start, $this->filterValue3End);
+                $filters[] = "column {$this->filterColumn3} {$rangeDesc}";
+            }
         }
 
         if (! empty($filters)) {
@@ -557,6 +759,22 @@ class GenerateReportJob implements ShouldQueue
         }
 
         return $description;
+    }
+
+    /**
+     * Get range description for report
+     */
+    private function getRangeDescription(?string $start, ?string $end): string
+    {
+        if ($start && $end) {
+            return "between '{$start}' and '{$end}'";
+        } elseif ($start) {
+            return "from '{$start}' onwards";
+        } elseif ($end) {
+            return "up to '{$end}'";
+        }
+
+        return '';
     }
 
     /**

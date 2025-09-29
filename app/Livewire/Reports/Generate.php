@@ -33,6 +33,19 @@ class Generate extends Component
 
     public $filterValue3 = '';
 
+    // Range filter properties
+    public $filterValueStart = '';
+
+    public $filterValueEnd = '';
+
+    public $filterValue2Start = '';
+
+    public $filterValue2End = '';
+
+    public $filterValue3Start = '';
+
+    public $filterValue3End = '';
+
     public $isLoading = false;
 
     public $error = '';
@@ -139,7 +152,7 @@ class Generate extends Component
 
             try {
                 $reader = IOFactory::createReader('Xlsx');
-                $reader->setReadDataOnly(true);
+                $reader->setReadDataOnly(false);
                 $reader->setReadEmptyCells(false);
 
                 $spreadsheet = $reader->load($tempPath);
@@ -153,10 +166,14 @@ class Generate extends Component
                     $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($colIndex);
                     $cellValue = $worksheet->getCell($columnLetter.'1')->getValue();
                     if (! empty($cellValue)) {
+                        // Detect if this column contains date values
+                        $isDateColumn = $this->detectColumnDateType($worksheet, $columnLetter, $colIndex);
+
                         $headers[] = [
                             'column' => $columnLetter,
                             'name' => $cellValue,
                             'index' => count($headers),
+                            'is_date' => $isDateColumn,
                         ];
                     }
                 }
@@ -208,8 +225,8 @@ class Generate extends Component
         // Clear validation error when user changes filter column
         $this->validationError = '';
 
-        // Check if the selected column contains date values
-        $this->isDateColumn = $this->isColumnDateType($this->filterColumn);
+        // Check if the selected column contains date values using cached data
+        $this->isDateColumn = $this->isColumnDateType((int) $this->filterColumn);
     }
 
     public function updatedFilterValue()
@@ -224,7 +241,7 @@ class Generate extends Component
         $this->validationError = '';
 
         // Check if the selected column contains date values
-        $this->isDateColumn2 = $this->isColumnDateType($this->filterColumn2);
+        $this->isDateColumn2 = $this->isColumnDateType((int) $this->filterColumn2);
     }
 
     public function updatedFilterValue2()
@@ -239,10 +256,46 @@ class Generate extends Component
         $this->validationError = '';
 
         // Check if the selected column contains date values
-        $this->isDateColumn3 = $this->isColumnDateType($this->filterColumn3);
+        $this->isDateColumn3 = $this->isColumnDateType((int) $this->filterColumn3);
     }
 
     public function updatedFilterValue3()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValueStart()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValueEnd()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValue2Start()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValue2End()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValue3Start()
+    {
+        // Clear validation error when user starts typing filter value
+        $this->validationError = '';
+    }
+
+    public function updatedFilterValue3End()
     {
         // Clear validation error when user starts typing filter value
         $this->validationError = '';
@@ -263,25 +316,70 @@ class Generate extends Component
             }
 
             // Validate filter fields if filter columns are selected
-            if (! empty($this->filterColumn) && empty(trim($this->filterValue))) {
-                $this->validationError = __('Please enter a filter value when a filter column is selected.');
-                $this->dispatch('showValidationError', $this->validationError);
+            if (! empty($this->filterColumn)) {
+                $hasSingleValue = ! empty(trim($this->filterValue));
+                $hasRangeValues = ! empty(trim($this->filterValueStart)) || ! empty(trim($this->filterValueEnd));
 
-                return;
+                if (! $hasSingleValue && ! $hasRangeValues) {
+                    $this->validationError = __('Please enter a filter value or range when a filter column is selected.');
+                    $this->dispatch('showValidationError', $this->validationError);
+
+                    return;
+                }
+
+                // Validate range if both start and end are provided
+                if (! empty(trim($this->filterValueStart)) && ! empty(trim($this->filterValueEnd))) {
+                    if ($this->isDateColumn && ! $this->validateDateRange($this->filterValueStart, $this->filterValueEnd)) {
+                        $this->validationError = __('Start date must be before or equal to end date.');
+                        $this->dispatch('showValidationError', $this->validationError);
+
+                        return;
+                    }
+                }
             }
 
-            if (! empty($this->filterColumn2) && empty(trim($this->filterValue2))) {
-                $this->validationError = __('Please enter a filter value for the second filter column.');
-                $this->dispatch('showValidationError', $this->validationError);
+            if (! empty($this->filterColumn2)) {
+                $hasSingleValue = ! empty(trim($this->filterValue2));
+                $hasRangeValues = ! empty(trim($this->filterValue2Start)) || ! empty(trim($this->filterValue2End));
 
-                return;
+                if (! $hasSingleValue && ! $hasRangeValues) {
+                    $this->validationError = __('Please enter a filter value or range for the second filter column.');
+                    $this->dispatch('showValidationError', $this->validationError);
+
+                    return;
+                }
+
+                // Validate range if both start and end are provided
+                if (! empty(trim($this->filterValue2Start)) && ! empty(trim($this->filterValue2End))) {
+                    if ($this->isDateColumn2 && ! $this->validateDateRange($this->filterValue2Start, $this->filterValue2End)) {
+                        $this->validationError = __('Start date must be before or equal to end date for filter 2.');
+                        $this->dispatch('showValidationError', $this->validationError);
+
+                        return;
+                    }
+                }
             }
 
-            if (! empty($this->filterColumn3) && empty(trim($this->filterValue3))) {
-                $this->validationError = __('Please enter a filter value for the third filter column.');
-                $this->dispatch('showValidationError', $this->validationError);
+            if (! empty($this->filterColumn3)) {
+                $hasSingleValue = ! empty(trim($this->filterValue3));
+                $hasRangeValues = ! empty(trim($this->filterValue3Start)) || ! empty(trim($this->filterValue3End));
 
-                return;
+                if (! $hasSingleValue && ! $hasRangeValues) {
+                    $this->validationError = __('Please enter a filter value or range for the third filter column.');
+                    $this->dispatch('showValidationError', $this->validationError);
+
+                    return;
+                }
+
+                // Validate range if both start and end are provided
+                if (! empty(trim($this->filterValue3Start)) && ! empty(trim($this->filterValue3End))) {
+                    if ($this->isDateColumn3 && ! $this->validateDateRange($this->filterValue3Start, $this->filterValue3End)) {
+                        $this->validationError = __('Start date must be before or equal to end date for filter 3.');
+                        $this->dispatch('showValidationError', $this->validationError);
+
+                        return;
+                    }
+                }
             }
 
             // Show loading dialog
@@ -337,80 +435,98 @@ class Generate extends Component
     }
 
     /**
-     * Check if a column contains date values by sampling the data
+     * Detect if a column contains date values during initial load
      */
-    private function isColumnDateType($columnIndex): bool
+    private function detectColumnDateType($worksheet, $columnLetter, $columnIndex): bool
     {
-        if (empty($columnIndex) || empty($this->document)) {
-            return false;
-        }
-
+        Log::info('detecting column date type', [
+            'column_letter' => $columnLetter,
+            'column_index' => $columnIndex,
+            'worksheet' => $worksheet
+        ]);
         try {
-            // Get file contents from storage
-            $fileContents = Storage::disk($this->document->disk)->get($this->document->path);
-            if ($fileContents === null) {
-                return false;
-            }
+            $highestRow = min($worksheet->getHighestRow(), 50); // Sample first 100 rows
+            $dateCount = 0;
+            $sampleCount = 0;
 
-            // Create a temporary file for PhpSpreadsheet
-            $tempPath = tempnam(sys_get_temp_dir(), 'excel_');
-            file_put_contents($tempPath, $fileContents);
+            // Sample the first few rows to determine if column contains dates
+            for ($row = 2; $row <= $highestRow; $row++) { // Skip header row
+                $cell = $worksheet->getCell($columnLetter.$row);
+                $cellValue = $cell->getFormattedValue();
 
-            try {
-                $reader = IOFactory::createReader('Xlsx');
-                $reader->setReadDataOnly(false);
-                $reader->setReadEmptyCells(false);
+                if (! empty($cellValue)) {
+                    $sampleCount++;
 
-                $spreadsheet = $reader->load($tempPath);
-                $worksheet = $spreadsheet->getActiveSheet();
-                $highestRow = min($worksheet->getHighestRow(), 100); // Sample first 100 rows
-
-                $columnLetter = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($columnIndex + 1);
-                $dateCount = 0;
-                $sampleCount = 0;
-
-                // Sample the first few rows to determine if column contains dates
-                for ($row = 2; $row <= $highestRow; $row++) { // Skip header row
-                    $cell = $worksheet->getCell($columnLetter.$row);
-                    $cellValue = $cell->getValue();
-
-                    if (! empty($cellValue)) {
-                        $sampleCount++;
-
-                        // Check if PhpSpreadsheet detects this as a date
-                        if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+                    // Check if PhpSpreadsheet detects this as a date
+                    if (\PhpOffice\PhpSpreadsheet\Shared\Date::isDateTime($cell)) {
+                        Log::info('date detected', [
+                            'column_letter' => $columnLetter,
+                            'column_index' => $columnIndex,
+                            'cell_value' => $cellValue,
+                        ]);
+                        $dateCount++;
+                    } else {
+                       Log::info('date not detected', [
+                            'column_letter' => $columnLetter,
+                            'column_index' => $columnIndex,
+                            'cell_value' => $cellValue,
+                        ]);
+                        // Also check if the string value looks like a date
+                        if (is_string($cellValue) && $this->looksLikeDate($cellValue)) {
                             $dateCount++;
-                        } else {
-                            // Also check if the string value looks like a date
-                            if (is_string($cellValue) && $this->looksLikeDate($cellValue)) {
-                                $dateCount++;
-                            }
-                        }
-
-                        // If we've sampled enough, break
-                        if ($sampleCount >= 10) {
-                            break;
                         }
                     }
-                }
 
-                return $dateCount > 0 && ($dateCount / max($sampleCount, 1)) > 0.5; // More than 50% are dates
-
-            } finally {
-                // Clean up temporary file
-                if (file_exists($tempPath)) {
-                    unlink($tempPath);
+                    // If we've sampled enough, break
+                    if ($sampleCount >= 10) {
+                        break;
+                    }
                 }
-                unset($spreadsheet, $worksheet, $reader);
             }
 
+            return $dateCount > 0 && ($dateCount / max($sampleCount, 1)) > 0.5; // More than 50% are dates
+
         } catch (Throwable $exception) {
-            Log::warning('Failed to detect column date type', [
-                'document_id' => $this->document->id,
+            Log::warning('Failed to detect column date type during load', [
+                'column_letter' => $columnLetter,
                 'column_index' => $columnIndex,
                 'message' => $exception->getMessage(),
             ]);
 
+            return false;
+        }
+    }
+
+    /**
+     * Check if a column contains date values using cached data
+     */
+    private function isColumnDateType($columnIndex): bool
+    {
+        if ($columnIndex === null || $columnIndex === '' || empty($this->columns)) {
+            return false;
+        }
+
+        // Convert to integer and check bounds
+        $index = (int) $columnIndex;
+        if ($index < 0 || $index >= count($this->columns)) {
+            return false;
+        }
+
+        // Return the cached date type information
+        return $this->columns[$index]['is_date'] ?? false;
+    }
+
+    /**
+     * Validate that start date is before or equal to end date
+     */
+    private function validateDateRange(string $startDate, string $endDate): bool
+    {
+        try {
+            $start = new \DateTime($startDate);
+            $end = new \DateTime($endDate);
+
+            return $start <= $end;
+        } catch (\Exception $e) {
             return false;
         }
     }
@@ -467,6 +583,12 @@ class Generate extends Component
                 $this->filterValue2,
                 $this->filterColumn3,
                 $this->filterValue3,
+                $this->filterValueStart,
+                $this->filterValueEnd,
+                $this->filterValue2Start,
+                $this->filterValue2End,
+                $this->filterValue3Start,
+                $this->filterValue3End,
                 $this->sessionId
             );
 

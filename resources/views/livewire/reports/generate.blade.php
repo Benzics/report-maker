@@ -321,7 +321,7 @@
                             {{ __('Filter Column') }}
                         </label>
                         <select 
-                            wire:model="filterColumn"
+                            wire:model.live="filterColumn"
                             class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
                         >
                             <option value="">{{ __('Select a column to filter by...') }}</option>
@@ -340,15 +340,55 @@
                         </label>
                         
                         @if($isDateColumn)
-                            <input 
-                                type="date" 
-                                wire:model="filterValue"
-                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                                x-bind:disabled="!$wire.filterColumn"
-                            />
-                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
-                            </p>
+                            <div class="space-y-3">
+                                <!-- Single Date Input -->
+                                <div>
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                        {{ __('Single Date') }}
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        wire:model="filterValue"
+                                        class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                        x-bind:disabled="!$wire.filterColumn"
+                                    />
+                                </div>
+                                
+                                <!-- Date Range Inputs -->
+                                <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
+                                        {{ __('Date Range') }}
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('From') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValueStart"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('To') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValueEnd"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                </p>
+                            </div>
                         @else
                             <input 
                                 type="text" 
@@ -373,7 +413,7 @@
                             {{ __('Filter Column') }}
                         </label>
                         <select 
-                            wire:model="filterColumn2"
+                            wire:model.live="filterColumn2"
                             class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
                         >
                             <option value="">{{ __('Select a column to filter by...') }}</option>
@@ -392,15 +432,55 @@
                         </label>
                         
                         @if($isDateColumn2)
-                            <input 
-                                type="date" 
-                                wire:model="filterValue2"
-                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                                x-bind:disabled="!$wire.filterColumn2"
-                            />
-                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
-                            </p>
+                            <div class="space-y-3">
+                                <!-- Single Date Input -->
+                                <div>
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                        {{ __('Single Date') }}
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        wire:model="filterValue2"
+                                        class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                        x-bind:disabled="!$wire.filterColumn2"
+                                    />
+                                </div>
+                                
+                                <!-- Date Range Inputs -->
+                                <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
+                                        {{ __('Date Range') }}
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('From') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValue2Start"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn2"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('To') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValue2End"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn2"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                </p>
+                            </div>
                         @else
                             <input 
                                 type="text" 
@@ -425,7 +505,7 @@
                             {{ __('Filter Column') }}
                         </label>
                         <select 
-                            wire:model="filterColumn3"
+                            wire:model.live="filterColumn3"
                             class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
                         >
                             <option value="">{{ __('Select a column to filter by...') }}</option>
@@ -444,15 +524,55 @@
                         </label>
                         
                         @if($isDateColumn3)
-                            <input 
-                                type="date" 
-                                wire:model="filterValue3"
-                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
-                                x-bind:disabled="!$wire.filterColumn3"
-                            />
-                            <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                {{ __('Or enter date in format: MM/DD/YYYY, DD/MM/YYYY, YYYY-MM-DD') }}
-                            </p>
+                            <div class="space-y-3">
+                                <!-- Single Date Input -->
+                                <div>
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
+                                        {{ __('Single Date') }}
+                                    </label>
+                                    <input 
+                                        type="date" 
+                                        wire:model="filterValue3"
+                                        class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                        x-bind:disabled="!$wire.filterColumn3"
+                                    />
+                                </div>
+                                
+                                <!-- Date Range Inputs -->
+                                <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
+                                    <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
+                                        {{ __('Date Range') }}
+                                    </label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('From') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValue3Start"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn3"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-zinc-500 dark:text-zinc-400 mb-1">
+                                                {{ __('To') }}
+                                            </label>
+                                            <input 
+                                                type="date" 
+                                                wire:model="filterValue3End"
+                                                class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
+                                                x-bind:disabled="!$wire.filterColumn3"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                </p>
+                            </div>
                         @else
                             <input 
                                 type="text" 
@@ -466,9 +586,9 @@
                 </div>
             </div>
 
-            <div x-show="($wire.filterColumn && !$wire.filterValue) || ($wire.filterColumn2 && !$wire.filterValue2) || ($wire.filterColumn3 && !$wire.filterValue3)" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
+            <div x-show="($wire.filterColumn && !$wire.filterValue && !$wire.filterValueStart && !$wire.filterValueEnd) || ($wire.filterColumn2 && !$wire.filterValue2 && !$wire.filterValue2Start && !$wire.filterValue2End) || ($wire.filterColumn3 && !$wire.filterValue3 && !$wire.filterValue3Start && !$wire.filterValue3End)" class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
                 <p class="text-sm text-blue-800 dark:text-blue-200">
-                    {{ __('Please enter values for all selected filter columns.') }}
+                    {{ __('Please enter values or ranges for all selected filter columns.') }}
                 </p>
             </div>
         </div>

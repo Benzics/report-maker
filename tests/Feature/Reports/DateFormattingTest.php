@@ -64,6 +64,7 @@ class DateFormattingTest extends TestCase
         $this->assertTrue(true); // Placeholder assertion
     }
 
+
     private function createTestExcelFileWithDates(): void
     {
         $testData = [
@@ -104,4 +105,5 @@ class DateFormattingTest extends TestCase
         $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save($filePath);
     }
+
 }
