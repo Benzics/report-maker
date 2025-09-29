@@ -12,6 +12,11 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Color;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\Font;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
 use Throwable;
 
 class GenerateReportJob implements ShouldQueue
@@ -45,6 +50,229 @@ class GenerateReportJob implements ShouldQueue
         public string $sessionId
     ) {
         //
+    }
+
+    /**
+     * Get color scheme for the selected table style
+     */
+    private function getTableStyleColors(string $tableStyle): array
+    {
+        $styles = [
+            // Light styles
+            'table_style_light_1' => [
+                'header_bg' => 'FFFFFF',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F2F2F2',
+                'border' => 'D9D9D9',
+            ],
+            'table_style_light_2' => [
+                'header_bg' => 'FFFFFF',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F8F9FA',
+                'border' => 'DEE2E6',
+            ],
+            'table_style_light_3' => [
+                'header_bg' => 'FFFFFF',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F1F3F4',
+                'border' => 'E0E0E0',
+            ],
+            'table_style_light_4' => [
+                'header_bg' => 'FFFFFF',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F5F5F5',
+                'border' => 'CCCCCC',
+            ],
+            'table_style_light_5' => [
+                'header_bg' => 'FFFFFF',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F0F0F0',
+                'border' => 'B3B3B3',
+            ],
+            
+            // Medium styles
+            'table_style_medium_1' => [
+                'header_bg' => '4472C4',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'E7E6F7',
+                'border' => '8EA9DB',
+            ],
+            'table_style_medium_2' => [
+                'header_bg' => '366092',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'D9E2F3',
+                'border' => '8FAADB',
+            ],
+            'table_style_medium_3' => [
+                'header_bg' => '70AD47',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'E2EFDA',
+                'border' => 'A9D18E',
+            ],
+            'table_style_medium_4' => [
+                'header_bg' => 'C55A11',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'FCE4D6',
+                'border' => 'E2A76F',
+            ],
+            'table_style_medium_5' => [
+                'header_bg' => '5B9BD5',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'DEEBF7',
+                'border' => '9CC2E5',
+            ],
+            'table_style_medium_6' => [
+                'header_bg' => 'A5A5A5',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F2F2F2',
+                'border' => 'D9D9D9',
+            ],
+            'table_style_medium_7' => [
+                'header_bg' => '7F7F7F',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F2F2F2',
+                'border' => 'D9D9D9',
+            ],
+            'table_style_medium_8' => [
+                'header_bg' => 'FFC000',
+                'header_text' => '000000',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'FFF2CC',
+                'border' => 'FFD966',
+            ],
+            'table_style_medium_9' => [
+                'header_bg' => 'E74C3C',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'FADBD8',
+                'border' => 'F1948A',
+            ],
+            'table_style_medium_10' => [
+                'header_bg' => '9B59B6',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'EBD4F4',
+                'border' => 'C39BD3',
+            ],
+            
+            // Dark styles
+            'table_style_dark_1' => [
+                'header_bg' => '2F2F2F',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'F2F2F2',
+                'border' => 'D9D9D9',
+            ],
+            'table_style_dark_2' => [
+                'header_bg' => '1F4E79',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'D9E2F3',
+                'border' => '8FAADB',
+            ],
+            'table_style_dark_3' => [
+                'header_bg' => '4F6228',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'E2EFDA',
+                'border' => 'A9D18E',
+            ],
+            'table_style_dark_4' => [
+                'header_bg' => '7C3A00',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'FCE4D6',
+                'border' => 'E2A76F',
+            ],
+            'table_style_dark_5' => [
+                'header_bg' => '1F4E79',
+                'header_text' => 'FFFFFF',
+                'row1_bg' => 'FFFFFF',
+                'row2_bg' => 'DEEBF7',
+                'border' => '9CC2E5',
+            ],
+        ];
+
+        // Return the style or default to medium_2 if not found
+        return $styles[$tableStyle] ?? $styles['table_style_medium_2'];
+    }
+
+    /**
+     * Apply table styling to the worksheet
+     */
+    private function applyTableStyling($worksheet, array $data, string $tableStyle): void
+    {
+        $colors = $this->getTableStyleColors($tableStyle);
+        $highestRow = count($data) + 1; // +1 for header row
+        $highestColumn = $worksheet->getHighestColumn();
+
+        // Style the header row (row 1)
+        $headerRange = 'A1:' . $highestColumn . '1';
+        $worksheet->getStyle($headerRange)->applyFromArray([
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => $colors['header_bg']],
+            ],
+            'font' => [
+                'color' => ['rgb' => $colors['header_text']],
+                'bold' => true,
+                'size' => 11,
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => $colors['border']],
+                ],
+            ],
+        ]);
+
+        // Style data rows with alternating colors
+        for ($row = 2; $row <= $highestRow; $row++) {
+            $isEvenRow = ($row % 2 === 0);
+            $rowRange = 'A' . $row . ':' . $highestColumn . $row;
+            
+            $backgroundColor = $isEvenRow ? $colors['row2_bg'] : $colors['row1_bg'];
+            
+            $worksheet->getStyle($rowRange)->applyFromArray([
+                'fill' => [
+                    'fillType' => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => $backgroundColor],
+                ],
+                'font' => [
+                    'size' => 10,
+                ],
+                'alignment' => [
+                    'vertical' => Alignment::VERTICAL_CENTER,
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => $colors['border']],
+                    ],
+                ],
+            ]);
+        }
+
+        // Set column widths to auto-size
+        foreach (range('A', $highestColumn) as $column) {
+            $worksheet->getColumnDimension($column)->setAutoSize(true);
+        }
     }
 
     /**
@@ -638,10 +866,8 @@ class GenerateReportJob implements ShouldQueue
             $rowIndex++;
         }
 
-        // Auto-size columns
-        foreach (range('A', $worksheet->getHighestColumn()) as $column) {
-            $worksheet->getColumnDimension($column)->setAutoSize(true);
-        }
+        // Apply table styling
+        $this->applyTableStyling($worksheet, $data, $this->tableStyle);
 
         // Create temporary file
         $tempPath = tempnam(sys_get_temp_dir(), 'generated_report_').'.xlsx';
