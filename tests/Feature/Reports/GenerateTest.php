@@ -507,4 +507,55 @@ class GenerateTest extends TestCase
         $component->set('filterColumn', '0')
             ->assertSet('isDateColumn', false);
     }
+
+    public function test_date_column_properties_are_set_when_loading_from_cache()
+    {
+        /** @var User $user */
+        $user = User::factory()->create();
+        $document = Document::factory()->create([
+            'user_id' => $user->id,
+            'original_name' => 'test_dates.xlsx',
+            'path' => 'documents/test_dates.xlsx',
+            'disk' => 'local',
+        ]);
+
+        // Create a test Excel file with dates
+        $this->createTestExcelFileWithDates($document);
+
+        // First load to populate cache
+        $component = Livewire::actingAs($user)
+            ->test(Generate::class, ['documentId' => $document->id])
+            ->assertSee('Select Columns to Include');
+
+        // Set some filter columns to test
+        $component->set('filterColumn', '2')  // Date column
+            ->set('filterColumn2', '0')       // Non-date column
+            ->set('filterColumn3', '2');      // Date column
+
+        // Verify the date properties are set correctly
+        $component->assertSet('isDateColumn', true)
+            ->assertSet('isDateColumn2', false)
+            ->assertSet('isDateColumn3', true);
+
+        // Now simulate loading from cache by creating a new component instance
+        // This should load the cached columns and set the date properties
+        $newComponent = Livewire::actingAs($user)
+            ->test(Generate::class, ['documentId' => $document->id]);
+
+        // The date properties should be set based on the current filter selections
+        // Since we haven't set any filter columns yet, they should all be false
+        $newComponent->assertSet('isDateColumn', false)
+            ->assertSet('isDateColumn2', false)
+            ->assertSet('isDateColumn3', false);
+
+        // Now set filter columns and verify date detection works with cached data
+        $newComponent->set('filterColumn', '2')
+            ->assertSet('isDateColumn', true);
+
+        $newComponent->set('filterColumn2', '0')
+            ->assertSet('isDateColumn2', false);
+
+        $newComponent->set('filterColumn3', '2')
+            ->assertSet('isDateColumn3', true);
+    }
 }

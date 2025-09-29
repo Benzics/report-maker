@@ -92,6 +92,9 @@ class Generate extends Component
             $this->columns = $cachedColumns;
             $this->isLoading = false;
 
+            // Set date column properties based on cached data
+            $this->updateDateColumnProperties();
+
             return;
         }
 
@@ -125,6 +128,9 @@ class Generate extends Component
             if ($cachedColumns !== null) {
                 $this->columns = $cachedColumns;
                 $this->isLoading = false;
+
+                // Set date column properties based on cached data
+                $this->updateDateColumnProperties();
 
                 return;
             }
@@ -442,7 +448,7 @@ class Generate extends Component
         Log::info('detecting column date type', [
             'column_letter' => $columnLetter,
             'column_index' => $columnIndex,
-            'worksheet' => $worksheet
+            'worksheet' => $worksheet,
         ]);
         try {
             $highestRow = min($worksheet->getHighestRow(), 50); // Sample first 100 rows
@@ -466,7 +472,7 @@ class Generate extends Component
                         ]);
                         $dateCount++;
                     } else {
-                       Log::info('date not detected', [
+                        Log::info('date not detected', [
                             'column_letter' => $columnLetter,
                             'column_index' => $columnIndex,
                             'cell_value' => $cellValue,
@@ -514,6 +520,17 @@ class Generate extends Component
 
         // Return the cached date type information
         return $this->columns[$index]['is_date'] ?? false;
+    }
+
+    /**
+     * Update date column properties based on current filter selections
+     */
+    private function updateDateColumnProperties(): void
+    {
+        // Update date column properties for all filter columns
+        $this->isDateColumn = $this->isColumnDateType((int) $this->filterColumn);
+        $this->isDateColumn2 = $this->isColumnDateType((int) $this->filterColumn2);
+        $this->isDateColumn3 = $this->isColumnDateType((int) $this->filterColumn3);
     }
 
     /**
