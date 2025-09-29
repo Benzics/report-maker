@@ -60,8 +60,72 @@ class Generate extends Component
 
     public $isDateColumn3 = false;
 
+    public $tableStyle = 'table_style_medium_2';
+
     // Cache key for processed columns
     private $cacheKey;
+
+    /**
+     * Get available table styles
+     */
+    public function getTableStyles()
+    {
+        return [
+            'table_style_light_1' => 'Table Style Light 1',
+            'table_style_light_2' => 'Table Style Light 2',
+            'table_style_light_3' => 'Table Style Light 3',
+            'table_style_light_4' => 'Table Style Light 4',
+            'table_style_light_5' => 'Table Style Light 5',
+            'table_style_light_6' => 'Table Style Light 6',
+            'table_style_light_7' => 'Table Style Light 7',
+            'table_style_light_8' => 'Table Style Light 8',
+            'table_style_light_9' => 'Table Style Light 9',
+            'table_style_light_10' => 'Table Style Light 10',
+            'table_style_light_11' => 'Table Style Light 11',
+            'table_style_light_12' => 'Table Style Light 12',
+            'table_style_light_13' => 'Table Style Light 13',
+            'table_style_light_14' => 'Table Style Light 14',
+            'table_style_light_15' => 'Table Style Light 15',
+            'table_style_light_16' => 'Table Style Light 16',
+            'table_style_light_17' => 'Table Style Light 17',
+            'table_style_light_18' => 'Table Style Light 18',
+            'table_style_light_19' => 'Table Style Light 19',
+            'table_style_light_20' => 'Table Style Light 20',
+            'table_style_light_21' => 'Table Style Light 21',
+            'table_style_medium_1' => 'Table Style Medium 1',
+            'table_style_medium_2' => 'Table Style Medium 2 (Blue)',
+            'table_style_medium_3' => 'Table Style Medium 3',
+            'table_style_medium_4' => 'Table Style Medium 4',
+            'table_style_medium_5' => 'Table Style Medium 5',
+            'table_style_medium_6' => 'Table Style Medium 6',
+            'table_style_medium_7' => 'Table Style Medium 7',
+            'table_style_medium_8' => 'Table Style Medium 8',
+            'table_style_medium_9' => 'Table Style Medium 9',
+            'table_style_medium_10' => 'Table Style Medium 10',
+            'table_style_medium_11' => 'Table Style Medium 11',
+            'table_style_medium_12' => 'Table Style Medium 12',
+            'table_style_medium_13' => 'Table Style Medium 13',
+            'table_style_medium_14' => 'Table Style Medium 14',
+            'table_style_medium_15' => 'Table Style Medium 15',
+            'table_style_medium_16' => 'Table Style Medium 16',
+            'table_style_medium_17' => 'Table Style Medium 17',
+            'table_style_medium_18' => 'Table Style Medium 18',
+            'table_style_medium_19' => 'Table Style Medium 19',
+            'table_style_medium_20' => 'Table Style Medium 20',
+            'table_style_medium_21' => 'Table Style Medium 21',
+            'table_style_dark_1' => 'Table Style Dark 1',
+            'table_style_dark_2' => 'Table Style Dark 2',
+            'table_style_dark_3' => 'Table Style Dark 3',
+            'table_style_dark_4' => 'Table Style Dark 4',
+            'table_style_dark_5' => 'Table Style Dark 5',
+            'table_style_dark_6' => 'Table Style Dark 6',
+            'table_style_dark_7' => 'Table Style Dark 7',
+            'table_style_dark_8' => 'Table Style Dark 8',
+            'table_style_dark_9' => 'Table Style Dark 9',
+            'table_style_dark_10' => 'Table Style Dark 10',
+            'table_style_dark_11' => 'Table Style Dark 11',
+        ];
+    }
 
     public function mount($documentId)
     {
@@ -606,6 +670,7 @@ class Generate extends Component
                 $this->filterValue2End,
                 $this->filterValue3Start,
                 $this->filterValue3End,
+                $this->tableStyle,
                 $this->sessionId
             );
 

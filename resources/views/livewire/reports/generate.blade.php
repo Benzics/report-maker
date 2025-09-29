@@ -305,6 +305,37 @@
             @endif
         </div>
 
+        <!-- Table Style Selection -->
+        <div class="bg-white dark:bg-zinc-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
+            <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+                {{ __('Table Style') }}
+            </h3>
+            <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                {{ __('Choose a color scheme for your generated report. This will apply formatting similar to Excel table styles.') }}
+            </p>
+            
+            <div class="space-y-3">
+                <label for="tableStyle" class="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    {{ __('Select Table Style') }}
+                </label>
+                <select 
+                    id="tableStyle"
+                    wire:model.live="tableStyle"
+                    class="w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100"
+                >
+                    @foreach($this->getTableStyles() as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
+                </select>
+                
+                <div class="mt-2 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-md">
+                    <p class="text-sm text-blue-800 dark:text-blue-200">
+                        <strong>{{ __('Preview:') }}</strong> {{ __('The selected style will be applied to your report with appropriate header colors and alternating row colors for better readability.') }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- Filter Options -->
         <div class="bg-white dark:bg-zinc-900 rounded-xl border border-neutral-200 dark:border-neutral-700 p-6">
             <h2 class="text-lg font-medium text-zinc-900 dark:text-zinc-100 mb-4">{{ __('Filter Data (Optional)') }}</h2>

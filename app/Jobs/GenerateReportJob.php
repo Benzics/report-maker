@@ -41,6 +41,7 @@ class GenerateReportJob implements ShouldQueue
         public ?string $filterValue2End,
         public ?string $filterValue3Start,
         public ?string $filterValue3End,
+        public string $tableStyle,
         public string $sessionId
     ) {
         //
@@ -113,6 +114,7 @@ class GenerateReportJob implements ShouldQueue
                 'filter_value2_end' => $this->filterValue2End,
                 'filter_value3_start' => $this->filterValue3Start,
                 'filter_value3_end' => $this->filterValue3End,
+                'table_style' => $this->tableStyle,
                 'file_path' => $storedPath,
                 'file_name' => $fileName,
                 'file_size' => Storage::disk('local')->size($storedPath),

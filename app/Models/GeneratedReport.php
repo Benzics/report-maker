@@ -28,6 +28,7 @@ class GeneratedReport extends Model
         'filter_value2_end',
         'filter_value3_start',
         'filter_value3_end',
+        'table_style',
         'file_path',
         'file_name',
         'file_size',
