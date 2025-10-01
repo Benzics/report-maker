@@ -617,21 +617,31 @@ class Generate extends Component
      */
     private function looksLikeDate(string $value): bool
     {
-        // Common date formats
+        // Prioritize DD/MM/YYYY formats first (European format)
         $dateFormats = [
-            'm/d/Y', 'm-d-Y', 'Y-m-d', 'd/m/Y', 'd-m-Y',
-            'm/d/y', 'm-d-y', 'd/m/y', 'd-m-y',
-            'n/j/Y', 'n-j-Y', 'j/n/Y', 'j-n-Y',
+            'd/m/Y', 'd-m-Y', 'j/n/Y', 'j-n-Y',  // DD/MM/YYYY formats first
+            'm/d/Y', 'm-d-Y', 'Y-m-d',            // MM/DD/YYYY and YYYY-MM-DD
+            'd/m/y', 'd-m-y', 'j/n/y', 'j-n-y',  // DD/MM/YY formats
+            'm/d/y', 'm-d-y',                     // MM/DD/YY formats
         ];
 
-        // Common datetime formats
+        // Prioritize DD/MM/YYYY datetime formats first (European format)
         $datetimeFormats = [
-            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i', 'd/m/Y H:i', 'd-m-Y H:i',
-            'm/d/y H:i', 'm-d-y H:i', 'd/m/y H:i', 'd-m-y H:i',
-            'n/j/Y H:i', 'n-j-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
-            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i', 'd/m/Y G:i', 'd-m-Y G:i',
-            'm/d/y G:i', 'm-d-y G:i', 'd/m/y G:i', 'd-m-y G:i',
-            'n/j/Y G:i', 'n-j-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            // DD/MM/YYYY datetime formats first (European format)
+            'd/m/Y H:i', 'd-m-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
+            'd/m/Y G:i', 'd-m-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            'd/m/Y H:i:s', 'd-m-Y H:i:s', 'j/n/Y H:i:s', 'j-n-Y H:i:s',
+            // MM/DD/YYYY datetime formats
+            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i',
+            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i',
+            'm/d/Y H:i:s', 'm-d-Y H:i:s', 'Y-m-d H:i:s',
+            // 2-digit year formats
+            'd/m/y H:i', 'd-m-y H:i', 'j/n/y H:i', 'j-n-y H:i',
+            'm/d/y H:i', 'm-d-y H:i',
+            'd/m/y G:i', 'd-m-y G:i', 'j/n/y G:i', 'j-n-y G:i',
+            'm/d/y G:i', 'm-d-y G:i',
+            'd/m/y H:i:s', 'd-m-y H:i:s', 'j/n/y H:i:s', 'j-n-y H:i:s',
+            'm/d/y H:i:s', 'm-d-y H:i:s',
             // ISO datetime formats (from HTML5 datetime-local inputs)
             'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d\TH:i:s.u', 'Y-m-d\TH:i:s.u\Z',
         ];

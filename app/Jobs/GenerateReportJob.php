@@ -461,24 +461,24 @@ class GenerateReportJob implements ShouldQueue
         $filters = [];
 
         // Filter 1
-        if (! empty($this->filterColumn)) {
+        if ($this->filterColumn !== null && $this->filterColumn !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue));
             $hasRangeValues = ! empty(trim($this->filterValueStart)) || ! empty(trim($this->filterValueEnd));
 
             if ($hasSingleValue || $hasRangeValues) {
+                $isDate = $this->isColumnDateType($data, (int) $this->filterColumn);
                 $filters[] = [
                     'column' => (int) $this->filterColumn,
                     'singleValue' => $hasSingleValue ? trim($this->filterValue) : null,
                     'rangeStart' => ! empty(trim($this->filterValueStart)) ? trim($this->filterValueStart) : null,
                     'rangeEnd' => ! empty(trim($this->filterValueEnd)) ? trim($this->filterValueEnd) : null,
-                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue)) :
-                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValueStart ?: $this->filterValueEnd)) : false),
+                    'isDate' => $isDate,
                 ];
             }
         }
 
         // Filter 2
-        if (! empty($this->filterColumn2)) {
+        if ($this->filterColumn2 !== null && $this->filterColumn2 !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue2));
             $hasRangeValues = ! empty(trim($this->filterValue2Start)) || ! empty(trim($this->filterValue2End));
 
@@ -488,14 +488,13 @@ class GenerateReportJob implements ShouldQueue
                     'singleValue' => $hasSingleValue ? trim($this->filterValue2) : null,
                     'rangeStart' => ! empty(trim($this->filterValue2Start)) ? trim($this->filterValue2Start) : null,
                     'rangeEnd' => ! empty(trim($this->filterValue2End)) ? trim($this->filterValue2End) : null,
-                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue2)) :
-                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValue2Start ?: $this->filterValue2End)) : false),
+                    'isDate' => $this->isColumnDateType($data, (int) $this->filterColumn2),
                 ];
             }
         }
 
         // Filter 3
-        if (! empty($this->filterColumn3)) {
+        if ($this->filterColumn3 !== null && $this->filterColumn3 !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue3));
             $hasRangeValues = ! empty(trim($this->filterValue3Start)) || ! empty(trim($this->filterValue3End));
 
@@ -505,8 +504,7 @@ class GenerateReportJob implements ShouldQueue
                     'singleValue' => $hasSingleValue ? trim($this->filterValue3) : null,
                     'rangeStart' => ! empty(trim($this->filterValue3Start)) ? trim($this->filterValue3Start) : null,
                     'rangeEnd' => ! empty(trim($this->filterValue3End)) ? trim($this->filterValue3End) : null,
-                    'isDate' => $hasSingleValue ? $this->isDateValue(trim($this->filterValue3)) :
-                               ($hasRangeValues ? $this->isDateValue(trim($this->filterValue3Start ?: $this->filterValue3End)) : false),
+                    'isDate' => $this->isColumnDateType($data, (int) $this->filterColumn3),
                 ];
             }
         }
@@ -559,6 +557,37 @@ class GenerateReportJob implements ShouldQueue
 
             return true; // All filters passed
         });
+    }
+
+    /**
+     * Check if a column contains date values by sampling the data
+     */
+    private function isColumnDateType(array $data, int $columnIndex): bool
+    {
+        if (empty($data) || $columnIndex < 0 || $columnIndex >= count($data[0])) {
+            return false;
+        }
+
+        $sampleCount = 0;
+        $dateCount = 0;
+        $maxSamples = min(10, count($data) - 1); // Sample up to 10 rows, excluding header
+
+        // Sample the first few rows to determine if column contains dates
+        for ($i = 1; $i < count($data) && $sampleCount < $maxSamples; $i++) {
+            $cellValue = $data[$i][$columnIndex] ?? '';
+            
+            if (!empty($cellValue)) {
+                $sampleCount++;
+                
+                // Check if this value looks like a date
+                if ($this->isDateValue($cellValue)) {
+                    $dateCount++;
+                }
+            }
+        }
+
+        // Consider it a date column if more than 50% of sampled values are dates
+        return $sampleCount > 0 && ($dateCount / $sampleCount) > 0.5;
     }
 
     /**
@@ -705,28 +734,37 @@ class GenerateReportJob implements ShouldQueue
 
     /**
      * Parse a date or datetime value using multiple formats
+     * Prioritizes DD/MM/YYYY format to handle European date formats correctly
      */
     private function parseDateValue(string $value): ?\DateTime
     {
         // Clean the value first
         $value = trim($value);
 
+        // Prioritize DD/MM/YYYY formats first (European format)
         $dateFormats = [
-            'm/d/Y', 'm-d-Y', 'Y-m-d', 'd/m/Y', 'd-m-Y',
-            'm/d/y', 'm-d-y', 'd/m/y', 'd-m-y',
-            'n/j/Y', 'n-j-Y', 'j/n/Y', 'j-n-Y',
+            'd/m/Y', 'd-m-Y', 'j/n/Y', 'j-n-Y',  // DD/MM/YYYY formats first
+            'm/d/Y', 'm-d-Y', 'Y-m-d',            // MM/DD/YYYY and YYYY-MM-DD
+            'd/m/y', 'd-m-y', 'j/n/y', 'j-n-y',  // DD/MM/YY formats
+            'm/d/y', 'm-d-y',                     // MM/DD/YY formats
         ];
 
         $datetimeFormats = [
-            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i', 'd/m/Y H:i', 'd-m-Y H:i',
-            'm/d/y H:i', 'm-d-y H:i', 'd/m/y H:i', 'd-m-y H:i',
-            'n/j/Y H:i', 'n-j-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
-            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i', 'd/m/Y G:i', 'd-m-Y G:i',
-            'm/d/y G:i', 'm-d-y G:i', 'd/m/y G:i', 'd-m-y G:i',
-            'n/j/Y G:i', 'n-j-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
-            'm/d/Y H:i:s', 'm-d-Y H:i:s', 'Y-m-d H:i:s', 'd/m/Y H:i:s', 'd-m-Y H:i:s',
-            'm/d/y H:i:s', 'm-d-y H:i:s', 'd/m/y H:i:s', 'd-m-y H:i:s',
-            'n/j/Y H:i:s', 'n-j-Y H:i:s', 'j/n/Y H:i:s', 'j-n-Y H:i:s',
+            // DD/MM/YYYY datetime formats first (European format)
+            'd/m/Y H:i', 'd-m-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
+            'd/m/Y G:i', 'd-m-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            'd/m/Y H:i:s', 'd-m-Y H:i:s', 'j/n/Y H:i:s', 'j-n-Y H:i:s',
+            // MM/DD/YYYY datetime formats
+            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i',
+            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i',
+            'm/d/Y H:i:s', 'm-d-Y H:i:s', 'Y-m-d H:i:s',
+            // 2-digit year formats
+            'd/m/y H:i', 'd-m-y H:i', 'j/n/y H:i', 'j-n-y H:i',
+            'm/d/y H:i', 'm-d-y H:i',
+            'd/m/y G:i', 'd-m-y G:i', 'j/n/y G:i', 'j-n-y G:i',
+            'm/d/y G:i', 'm-d-y G:i',
+            'd/m/y H:i:s', 'd-m-y H:i:s', 'j/n/y H:i:s', 'j-n-y H:i:s',
+            'm/d/y H:i:s', 'm-d-y H:i:s',
             // ISO datetime formats (from HTML5 datetime-local inputs)
             'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d\TH:i:s.u', 'Y-m-d\TH:i:s.u\Z',
         ];
@@ -813,17 +851,24 @@ class GenerateReportJob implements ShouldQueue
 
             // If only start date is provided, check if cell date is >= start
             if ($startDate && ! $endDate) {
-                return $cellDate >= $startDate;
+                // For date range filtering, compare date parts only
+                return $cellDate->format('Y-m-d') >= $startDate->format('Y-m-d');
             }
 
             // If only end date is provided, check if cell date is <= end
             if (! $startDate && $endDate) {
-                return $cellDate <= $endDate;
+                // For date range filtering, compare date parts only
+                return $cellDate->format('Y-m-d') <= $endDate->format('Y-m-d');
             }
 
             // If both dates are provided, check if cell date is between them
             if ($startDate && $endDate) {
-                return $cellDate >= $startDate && $cellDate <= $endDate;
+                // For date range filtering, compare date parts only
+                $cellDateOnly = $cellDate->format('Y-m-d');
+                $startDateOnly = $startDate->format('Y-m-d');
+                $endDateOnly = $endDate->format('Y-m-d');
+                
+                return $cellDateOnly >= $startDateOnly && $cellDateOnly <= $endDateOnly;
             }
 
             return false;
@@ -990,7 +1035,7 @@ class GenerateReportJob implements ShouldQueue
         $filters = [];
 
         // Filter 1
-        if (! empty($this->filterColumn)) {
+        if ($this->filterColumn !== null && $this->filterColumn !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue));
             $hasRangeValues = ! empty(trim($this->filterValueStart)) || ! empty(trim($this->filterValueEnd));
 
@@ -1003,7 +1048,7 @@ class GenerateReportJob implements ShouldQueue
         }
 
         // Filter 2
-        if (! empty($this->filterColumn2)) {
+        if ($this->filterColumn2 !== null && $this->filterColumn2 !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue2));
             $hasRangeValues = ! empty(trim($this->filterValue2Start)) || ! empty(trim($this->filterValue2End));
 
@@ -1016,7 +1061,7 @@ class GenerateReportJob implements ShouldQueue
         }
 
         // Filter 3
-        if (! empty($this->filterColumn3)) {
+        if ($this->filterColumn3 !== null && $this->filterColumn3 !== '') {
             $hasSingleValue = ! empty(trim($this->filterValue3));
             $hasRangeValues = ! empty(trim($this->filterValue3Start)) || ! empty(trim($this->filterValue3End));
 
