@@ -613,7 +613,7 @@ class Generate extends Component
     }
 
     /**
-     * Check if a string value looks like a date
+     * Check if a string value looks like a date or datetime
      */
     private function looksLikeDate(string $value): bool
     {
@@ -624,6 +624,19 @@ class Generate extends Component
             'n/j/Y', 'n-j-Y', 'j/n/Y', 'j-n-Y',
         ];
 
+        // Common datetime formats
+        $datetimeFormats = [
+            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i', 'd/m/Y H:i', 'd-m-Y H:i',
+            'm/d/y H:i', 'm-d-y H:i', 'd/m/y H:i', 'd-m-y H:i',
+            'n/j/Y H:i', 'n-j-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
+            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i', 'd/m/Y G:i', 'd-m-Y G:i',
+            'm/d/y G:i', 'm-d-y G:i', 'd/m/y G:i', 'd-m-y G:i',
+            'n/j/Y G:i', 'n-j-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            // ISO datetime formats (from HTML5 datetime-local inputs)
+            'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d\TH:i:s.u', 'Y-m-d\TH:i:s.u\Z',
+        ];
+
+        // Try date formats first
         foreach ($dateFormats as $format) {
             $date = \DateTime::createFromFormat($format, $value);
             if ($date && $date->format($format) === $value) {
@@ -631,13 +644,34 @@ class Generate extends Component
             }
         }
 
-        // Also check for common date patterns with regex
+        // Try datetime formats
+        foreach ($datetimeFormats as $format) {
+            $date = \DateTime::createFromFormat($format, $value);
+            if ($date && $date->format($format) === $value) {
+                return true;
+            }
+        }
+
+        // Also check for common date and datetime patterns with regex
         $datePatterns = [
             '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/',  // MM/DD/YYYY, MM-DD-YYYY
             '/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/',    // YYYY/MM/DD, YYYY-MM-DD
         ];
 
+        $datetimePatterns = [
+            '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\s+\d{1,2}:\d{2}$/',  // MM/DD/YYYY HH:MM, MM-DD-YYYY HH:MM
+            '/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\s+\d{1,2}:\d{2}$/',    // YYYY/MM/DD HH:MM, YYYY-MM-DD HH:MM
+            '/^\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{2}$/',               // YYYY-MM-DDTHH:MM (ISO datetime)
+            '/^\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{2}:\d{2}$/',         // YYYY-MM-DDTHH:MM:SS (ISO datetime)
+        ];
+
         foreach ($datePatterns as $pattern) {
+            if (preg_match($pattern, $value)) {
+                return true;
+            }
+        }
+
+        foreach ($datetimePatterns as $pattern) {
             if (preg_match($pattern, $value)) {
                 return true;
             }

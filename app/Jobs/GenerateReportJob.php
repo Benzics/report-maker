@@ -562,23 +562,30 @@ class GenerateReportJob implements ShouldQueue
     }
 
     /**
-     * Check if a value looks like a date
+     * Check if a value looks like a date or datetime
      */
     private function isDateValue(string $value): bool
     {
         // Common date formats
         $dateFormats = [
-            'm/d/Y',     // 09/15/2025
-            'm-d-Y',     // 09-15-2025
-            'Y-m-d',     // 2025-09-15
-            'd/m/Y',     // 15/09/2025
-            'd-m-Y',     // 15-09-2025
-            'm/d/y',     // 09/15/25
-            'm-d-y',     // 09-15-25
-            'd/m/y',     // 15/09/25
-            'd-m-y',     // 15-09-25
+            'm/d/Y', 'm-d-Y', 'Y-m-d', 'd/m/Y', 'd-m-Y',
+            'm/d/y', 'm-d-y', 'd/m/y', 'd-m-y',
+            'n/j/Y', 'n-j-Y', 'j/n/Y', 'j-n-Y',
         ];
 
+        // Common datetime formats
+        $datetimeFormats = [
+            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i', 'd/m/Y H:i', 'd-m-Y H:i',
+            'm/d/y H:i', 'm-d-y H:i', 'd/m/y H:i', 'd-m-y H:i',
+            'n/j/Y H:i', 'n-j-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
+            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i', 'd/m/Y G:i', 'd-m-Y G:i',
+            'm/d/y G:i', 'm-d-y G:i', 'd/m/y G:i', 'd-m-y G:i',
+            'n/j/Y G:i', 'n-j-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            // ISO datetime formats (from HTML5 datetime-local inputs)
+            'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d\TH:i:s.u', 'Y-m-d\TH:i:s.u\Z',
+        ];
+
+        // Try date formats first
         foreach ($dateFormats as $format) {
             $date = \DateTime::createFromFormat($format, $value);
             if ($date && $date->format($format) === $value) {
@@ -586,13 +593,34 @@ class GenerateReportJob implements ShouldQueue
             }
         }
 
-        // Also check for common date patterns with regex
+        // Try datetime formats
+        foreach ($datetimeFormats as $format) {
+            $date = \DateTime::createFromFormat($format, $value);
+            if ($date && $date->format($format) === $value) {
+                return true;
+            }
+        }
+
+        // Also check for common date and datetime patterns with regex
         $datePatterns = [
             '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/',  // MM/DD/YYYY, MM-DD-YYYY
             '/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}$/',    // YYYY/MM/DD, YYYY-MM-DD
         ];
 
+        $datetimePatterns = [
+            '/^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\s+\d{1,2}:\d{2}$/',  // MM/DD/YYYY HH:MM, MM-DD-YYYY HH:MM
+            '/^\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}\s+\d{1,2}:\d{2}$/',    // YYYY/MM/DD HH:MM, YYYY-MM-DD HH:MM
+            '/^\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{2}$/',               // YYYY-MM-DDTHH:MM (ISO datetime)
+            '/^\d{4}-\d{1,2}-\d{1,2}T\d{1,2}:\d{2}:\d{2}$/',         // YYYY-MM-DDTHH:MM:SS (ISO datetime)
+        ];
+
         foreach ($datePatterns as $pattern) {
+            if (preg_match($pattern, $value)) {
+                return true;
+            }
+        }
+
+        foreach ($datetimePatterns as $pattern) {
             if (preg_match($pattern, $value)) {
                 return true;
             }
@@ -676,7 +704,7 @@ class GenerateReportJob implements ShouldQueue
     }
 
     /**
-     * Parse a date value using multiple formats
+     * Parse a date or datetime value using multiple formats
      */
     private function parseDateValue(string $value): ?\DateTime
     {
@@ -684,26 +712,26 @@ class GenerateReportJob implements ShouldQueue
         $value = trim($value);
 
         $dateFormats = [
-            'm/d/Y',     // 09/15/2025
-            'm-d-Y',     // 09-15-2025
-            'Y-m-d',     // 2025-09-15
-            'd/m/Y',     // 15/09/2025
-            'd-m-Y',     // 15-09-2025
-            'm/d/y',     // 09/15/25
-            'm-d-y',     // 09-15-25
-            'd/m/y',     // 15/09/25
-            'd-m-y',     // 15-09-25
-            'n/j/Y',     // 9/15/2025 (no leading zeros)
-            'n-j-Y',     // 9-15-2025
-            'j/n/Y',     // 15/9/2025
-            'j-n-Y',     // 15-9-2025
-            'm/d/Y H:i:s', // 09/15/2025 14:30:00
-            'm-d-Y H:i:s', // 09-15-2025 14:30:00
-            'Y-m-d H:i:s', // 2025-09-15 14:30:00
-            'd/m/Y H:i:s', // 15/09/2025 14:30:00
-            'd-m-Y H:i:s', // 15-09-2025 14:30:00
+            'm/d/Y', 'm-d-Y', 'Y-m-d', 'd/m/Y', 'd-m-Y',
+            'm/d/y', 'm-d-y', 'd/m/y', 'd-m-y',
+            'n/j/Y', 'n-j-Y', 'j/n/Y', 'j-n-Y',
         ];
 
+        $datetimeFormats = [
+            'm/d/Y H:i', 'm-d-Y H:i', 'Y-m-d H:i', 'd/m/Y H:i', 'd-m-Y H:i',
+            'm/d/y H:i', 'm-d-y H:i', 'd/m/y H:i', 'd-m-y H:i',
+            'n/j/Y H:i', 'n-j-Y H:i', 'j/n/Y H:i', 'j-n-Y H:i',
+            'm/d/Y G:i', 'm-d-Y G:i', 'Y-m-d G:i', 'd/m/Y G:i', 'd-m-Y G:i',
+            'm/d/y G:i', 'm-d-y G:i', 'd/m/y G:i', 'd-m-y G:i',
+            'n/j/Y G:i', 'n-j-Y G:i', 'j/n/Y G:i', 'j-n-Y G:i',
+            'm/d/Y H:i:s', 'm-d-Y H:i:s', 'Y-m-d H:i:s', 'd/m/Y H:i:s', 'd-m-Y H:i:s',
+            'm/d/y H:i:s', 'm-d-y H:i:s', 'd/m/y H:i:s', 'd-m-y H:i:s',
+            'n/j/Y H:i:s', 'n-j-Y H:i:s', 'j/n/Y H:i:s', 'j-n-Y H:i:s',
+            // ISO datetime formats (from HTML5 datetime-local inputs)
+            'Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d\TH:i:s.u', 'Y-m-d\TH:i:s.u\Z',
+        ];
+
+        // Try date formats first
         foreach ($dateFormats as $format) {
             $date = \DateTime::createFromFormat($format, $value);
             if ($date && $date->format($format) === $value) {
@@ -711,10 +739,17 @@ class GenerateReportJob implements ShouldQueue
             }
         }
 
-        // Try to parse as a general date string
+        // Try datetime formats
+        foreach ($datetimeFormats as $format) {
+            $date = \DateTime::createFromFormat($format, $value);
+            if ($date && $date->format($format) === $value) {
+                return $date;
+            }
+        }
+
+        // Try to parse as a general date/datetime string
         try {
             $date = new \DateTime($value);
-
             return $date;
         } catch (\Exception $e) {
             // If all else fails, return null
@@ -723,10 +758,21 @@ class GenerateReportJob implements ShouldQueue
     }
 
     /**
-     * Check if two dates match (same day, ignoring time)
+     * Check if two dates/datetimes match
+     * For datetime values, compare the full datetime. For date-only values, compare just the date.
      */
     private function datesMatch(\DateTime $date1, \DateTime $date2): bool
     {
+        // Check if both dates have time components (not just date)
+        $date1HasTime = $date1->format('H:i:s') !== '00:00:00';
+        $date2HasTime = $date2->format('H:i:s') !== '00:00:00';
+        
+        // If either date has time, compare the full datetime
+        if ($date1HasTime || $date2HasTime) {
+            return $date1->format('Y-m-d H:i:s') === $date2->format('Y-m-d H:i:s');
+        }
+        
+        // If both are date-only, compare just the date
         return $date1->format('Y-m-d') === $date2->format('Y-m-d');
     }
 

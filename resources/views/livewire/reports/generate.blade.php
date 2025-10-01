@@ -372,23 +372,27 @@
                         
                         @if($isDateColumn)
                             <div class="space-y-3">
-                                <!-- Single Date Input -->
+                                <!-- Single Date/DateTime Input -->
                                 <div>
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                                        {{ __('Single Date') }}
+                                        {{ __('Single Date/Time') }}
                                     </label>
                                     <input 
-                                        type="date" 
+                                        type="datetime-local" 
                                         wire:model="filterValue"
                                         class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                         x-bind:disabled="!$wire.filterColumn"
+                                        step="60"
                                     />
+                                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                        {{ __('Supports both date (YYYY-MM-DD) and datetime (YYYY-MM-DD HH:MM) formats') }}
+                                    </p>
                                 </div>
                                 
-                                <!-- Date Range Inputs -->
+                                <!-- Date/DateTime Range Inputs -->
                                 <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
-                                        {{ __('Date Range') }}
+                                        {{ __('Date/Time Range') }}
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -396,10 +400,11 @@
                                                 {{ __('From') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValueStart"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn"
+                                                step="60"
                                             />
                                         </div>
                                         <div>
@@ -407,17 +412,18 @@
                                                 {{ __('To') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValueEnd"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn"
+                                                step="60"
                                             />
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                    {{ __('Use single date/time for exact match or range for filtering between dates/times. Supports formats like 01/09/2025 07:23') }}
                                 </p>
                             </div>
                         @else
@@ -464,23 +470,27 @@
                         
                         @if($isDateColumn2)
                             <div class="space-y-3">
-                                <!-- Single Date Input -->
+                                <!-- Single Date/DateTime Input -->
                                 <div>
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                                        {{ __('Single Date') }}
+                                        {{ __('Single Date/Time') }}
                                     </label>
                                     <input 
-                                        type="date" 
+                                        type="datetime-local" 
                                         wire:model="filterValue2"
                                         class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                         x-bind:disabled="!$wire.filterColumn2"
+                                        step="60"
                                     />
+                                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                        {{ __('Supports both date (YYYY-MM-DD) and datetime (YYYY-MM-DD HH:MM) formats') }}
+                                    </p>
                                 </div>
                                 
-                                <!-- Date Range Inputs -->
+                                <!-- Date/DateTime Range Inputs -->
                                 <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
-                                        {{ __('Date Range') }}
+                                        {{ __('Date/Time Range') }}
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -488,10 +498,11 @@
                                                 {{ __('From') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValue2Start"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn2"
+                                                step="60"
                                             />
                                         </div>
                                         <div>
@@ -499,17 +510,18 @@
                                                 {{ __('To') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValue2End"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn2"
+                                                step="60"
                                             />
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                    {{ __('Use single date/time for exact match or range for filtering between dates/times. Supports formats like 01/09/2025 07:23') }}
                                 </p>
                             </div>
                         @else
@@ -556,23 +568,27 @@
                         
                         @if($isDateColumn3)
                             <div class="space-y-3">
-                                <!-- Single Date Input -->
+                                <!-- Single Date/DateTime Input -->
                                 <div>
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-1">
-                                        {{ __('Single Date') }}
+                                        {{ __('Single Date/Time') }}
                                     </label>
                                     <input 
-                                        type="date" 
+                                        type="datetime-local" 
                                         wire:model="filterValue3"
                                         class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                         x-bind:disabled="!$wire.filterColumn3"
+                                        step="60"
                                     />
+                                    <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                                        {{ __('Supports both date (YYYY-MM-DD) and datetime (YYYY-MM-DD HH:MM) formats') }}
+                                    </p>
                                 </div>
                                 
-                                <!-- Date Range Inputs -->
+                                <!-- Date/DateTime Range Inputs -->
                                 <div class="border-t border-neutral-200 dark:border-neutral-600 pt-3">
                                     <label class="block text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">
-                                        {{ __('Date Range') }}
+                                        {{ __('Date/Time Range') }}
                                     </label>
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
@@ -580,10 +596,11 @@
                                                 {{ __('From') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValue3Start"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn3"
+                                                step="60"
                                             />
                                         </div>
                                         <div>
@@ -591,17 +608,18 @@
                                                 {{ __('To') }}
                                             </label>
                                             <input 
-                                                type="date" 
+                                                type="datetime-local" 
                                                 wire:model="filterValue3End"
                                                 class="block w-full px-3 py-2 border border-neutral-300 dark:border-neutral-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-zinc-800 dark:text-zinc-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 dark:disabled:bg-zinc-700"
                                                 x-bind:disabled="!$wire.filterColumn3"
+                                                step="60"
                                             />
                                         </div>
                                     </div>
                                 </div>
                                 
                                 <p class="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                                    {{ __('Use single date for exact match or range for filtering between dates') }}
+                                    {{ __('Use single date/time for exact match or range for filtering between dates/times. Supports formats like 01/09/2025 07:23') }}
                                 </p>
                             </div>
                         @else
